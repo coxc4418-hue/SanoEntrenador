@@ -1,0 +1,153 @@
+rules_version = '2';
+
+// SanoEntrenador — Reglas de seguridad
+// - Cada entrenador (cuenta) solo accede a sus propios datos en tenants/{uid}.
+// - El administrador general crea, congela, renueva y elimina cuentas.
+// - Una cuenta congelada o con el plan vencido no puede leer ni escribir sus datos.
+// - Las demos (sesión anónima) caducan a los 30 minutos: después solo pueden borrar sus datos.
+// - cards/{código}: carnet público del alumno (plan, sesiones, rutina y avances); se lee por código exacto, sin listar.
+// - cards/{código}/logs: lo que el alumno registra desde su carnet (entrenos y pesajes). Solo puede agregar, con campos limitados.
+// - pages/{usuario}: página pública del entrenador (perfil, planes y WhatsApp).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'admin@sanoentrenador.app'
+        && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+
+    function isAnon() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function isOwner(tenantId) {
+      return signedIn() && request.auth.uid == tenantId;
+    }
+
+    function tenantData(tenantId) {
+      return get(/databases/$(database)/documents/tenants/$(tenantId)).data;
+    }
+
+    // Activa = no congelada, no eliminada y con el plan vigente (si tiene fecha de vencimiento)
+    function tenantActive(tenantId) {
+      let t = tenantData(tenantId);
+      let paid = t.get('paidUntil', null);
+      return t.get('active', true) == true
+        && t.get('deleted', false) != true
+        && (paid == null || paid > request.time);
+    }
+
+    // Una demo solo puede crear/modificar datos mientras no haya vencido
+    function demoValid(tenantId) {
+      let t = tenantData(tenantId);
+      return t.get('demo', false) != true || t.expiresAt > request.time;
+    }
+
+    // Usuario → correo (para iniciar sesión con el nombre de usuario)
+    match /usernames/{username} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if isSuperAdmin();
+    }
+
+    // Avisos generales del administrador para todas las cuentas
+    match /system/{docId} {
+      allow read: if signedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // Página pública del entrenador (/coach/usuario)
+    match /pages/{slug} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if signedIn() && !isAnon()
+        && request.resource.data.tenantId == request.auth.uid
+        && slug.matches('^[a-z0-9-]{3,30}$')
+        && tenantActive(request.auth.uid);
+      allow update: if signedIn() && !isAnon()
+        && resource.data.tenantId == request.auth.uid
+        && request.resource.data.tenantId == request.auth.uid
+        && tenantActive(request.auth.uid);
+      allow delete: if isSuperAdmin() || (signedIn() && resource.data.tenantId == request.auth.uid);
+    }
+
+    // Carnet público del alumno: se lee por código exacto (no se puede listar).
+    match /cards/{code} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if isSuperAdmin()
+        || (signedIn() && request.resource.data.tenantId == request.auth.uid
+            && tenantActive(request.auth.uid) && demoValid(request.auth.uid));
+      allow update: if isSuperAdmin()
+        || (signedIn() && resource.data.tenantId == request.auth.uid
+            && request.resource.data.tenantId == request.auth.uid
+            && tenantActive(request.auth.uid) && demoValid(request.auth.uid));
+      allow delete: if isSuperAdmin() || (signedIn() && resource.data.tenantId == request.auth.uid);
+
+      function card() {
+        return get(/databases/$(database)/documents/cards/$(code)).data;
+      }
+
+      // Bitácora del alumno: entrenos y pesajes que registra desde su carnet
+      match /logs/{logId} {
+        allow read: if true;
+        allow create: if exists(/databases/$(database)/documents/cards/$(code))
+          && card().get('active', true) == true
+          && request.resource.data.tenantId == card().tenantId
+          && request.resource.data.keys().hasOnly(['at', 'kind', 'day', 'dayName', 'done', 'total', 'rpe', 'note', 'loads', 'mins', 'weight', 'tenantId', 'name'])
+          && request.resource.data.kind in ['entreno', 'peso', 'nota']
+          && request.resource.data.at is string && request.resource.data.at.size() <= 40
+          && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 400))
+          && (!('dayName' in request.resource.data) || (request.resource.data.dayName is string && request.resource.data.dayName.size() <= 80))
+          && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 60))
+          && (!('loads' in request.resource.data) || (request.resource.data.loads is map && request.resource.data.loads.size() <= 40))
+          && (!('weight' in request.resource.data) || (request.resource.data.weight is number && request.resource.data.weight > 20 && request.resource.data.weight < 400))
+          && (!('rpe' in request.resource.data) || (request.resource.data.rpe is number && request.resource.data.rpe >= 0 && request.resource.data.rpe <= 10));
+        allow update: if false;
+        allow delete: if isSuperAdmin() || (signedIn() && card().tenantId == request.auth.uid);
+      }
+    }
+
+    // El entrenador ve la bitácora de todos sus alumnos (consulta por grupo de colecciones)
+    match /{path=**}/logs/{logId} {
+      allow read: if signedIn() && resource.data.tenantId == request.auth.uid;
+    }
+
+    match /tenants/{tenantId} {
+      allow get: if isSuperAdmin() || isOwner(tenantId);
+      allow list: if isSuperAdmin();
+
+      // Las cuentas las crea el administrador. Una sesión anónima solo puede crear su demo (máx. 31 min).
+      allow create: if isSuperAdmin()
+        || (isOwner(tenantId) && isAnon()
+            && request.resource.data.demo == true
+            && request.resource.data.active == true
+            && request.resource.data.ownerUid == request.auth.uid
+            && request.resource.data.expiresAt <= request.time + duration.value(31, 'm'));
+
+      // La cuenta solo puede cambiar su nombre visible; estado, plan y vencimiento los maneja el administrador.
+      allow update: if isSuperAdmin()
+        || (isOwner(tenantId) && tenantActive(tenantId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt']));
+
+      allow delete: if isSuperAdmin() || (isOwner(tenantId) && resource.data.get('demo', false) == true);
+
+      // Datos del entrenador: alumnos, planes, sesiones, asistencias, rutinas, evaluaciones, cobros, recordatorios...
+      match /{collection}/{docId} {
+        allow read: if isSuperAdmin() || (isOwner(tenantId) && tenantActive(tenantId));
+        allow delete: if isSuperAdmin() || (isOwner(tenantId) && (tenantActive(tenantId) || tenantData(tenantId).get('demo', false) == true));
+        allow create, update: if isSuperAdmin() || (isOwner(tenantId) && tenantActive(tenantId) && demoValid(tenantId));
+      }
+    }
+
+    // Cualquier otra ruta queda bloqueada.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

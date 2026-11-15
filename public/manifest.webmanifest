@@ -1,0 +1,89 @@
+{
+  "id": "/",
+  "name": "SanoEntrenador — Gestión para entrenadores personales",
+  "short_name": "SanoEntrenador",
+  "description": "Agenda de sesiones, asistencia con QR, planes y cobros, rutinas para compartir, evaluaciones con avances que el alumno ve en su carnet y recordatorios por WhatsApp.",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "orientation": "any",
+  "background_color": "#05070d",
+  "theme_color": "#0a0e1a",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": [
+    "health",
+    "fitness",
+    "business",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agenda de sesiones",
+      "short_name": "Agenda",
+      "url": "/#/agenda",
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Asistencia con QR",
+      "short_name": "Asistencia",
+      "url": "/#/asistencia",
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Alumnos",
+      "short_name": "Alumnos",
+      "url": "/#/alumnos",
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Recordatorios",
+      "short_name": "Avisos",
+      "url": "/#/avisos",
+      "icons": [
+        {
+          "src": "/assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
