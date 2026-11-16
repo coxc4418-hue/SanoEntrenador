@@ -94,6 +94,7 @@ class Store {
     this.recentSales = [];
     this.templates = [];
     this.dietTemplates = [];
+    this.nutriTemplates = [];
     this.reminders = [];
     this.remlog = {};
     this.ready = false;
@@ -137,7 +138,7 @@ class Store {
     this.stop();
     this.tenantId = tenantId;
     this._loaded = new Set();
-    const need = ['tenant', 'settings', 'members', 'sessions', 'checkins', 'sales', 'templates', 'dietTemplates', 'reminders', 'remlog'];
+    const need = ['tenant', 'settings', 'members', 'sessions', 'checkins', 'sales', 'templates', 'dietTemplates', 'nutriTemplates', 'reminders', 'remlog'];
     let resolveReady;
     const readyP = new Promise((r) => { resolveReady = r; });
     const mark = (k) => { this._loaded.add(k); if (need.every((x) => this._loaded.has(x))) resolveReady(); };
@@ -175,6 +176,7 @@ class Store {
     });
     listen(query(this.col('routines'), where('template', '==', true)), 'templates', (s) => { this.templates = rows(s).sort(byName); });
     listen(query(this.col('diets'), where('template', '==', true)), 'dietTemplates', (s) => { this.dietTemplates = rows(s).sort(byName); });
+    listen(query(this.col('nutris'), where('template', '==', true)), 'nutriTemplates', (s) => { this.nutriTemplates = rows(s).sort(byName); });
     listen(query(this.col('reminders'), where('done', '==', false)), 'reminders', (s) => { this.reminders = rows(s).sort((a, b) => (a.date || '').localeCompare(b.date || '')); });
     listen(query(this.col('remlog'), where('at', '>=', startOfDay(addDays(new Date(), -30)).toISOString())), 'remlog', (s) => {
       this.remlog = {}; s.docs.forEach((d) => { this.remlog[d.id] = d.data(); });
@@ -188,7 +190,7 @@ class Store {
     this._unsubs.forEach((u) => { try { u(); } catch (_) {} });
     this._unsubs = [];
     this.ready = false;
-    this.tenant = null; this.members = []; this.sessions = []; this.todayCheckins = []; this.recentSales = []; this.templates = []; this.dietTemplates = []; this.reminders = []; this.remlog = {};
+    this.tenant = null; this.members = []; this.sessions = []; this.todayCheckins = []; this.recentSales = []; this.templates = []; this.dietTemplates = []; this.nutriTemplates = []; this.reminders = []; this.remlog = {};
     this.settings = { ...DEFAULT_SETTINGS }; this.security = {}; this.counters = {}; this._mMap = null;
   }
 
@@ -329,6 +331,7 @@ class Store {
   async memberMemberships(id) { return (await this.listEq('memberships', 'memberId', id)).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')); }
   async memberCheckins(id) { return (await this.listEq('checkins', 'memberId', id)).sort((a, b) => (b.date || '').localeCompare(a.date || '')); }
   async memberEvals(id) { return (await this.listEq('evaluations', 'memberId', id)).sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
+  async memberNutris(id) { return (await this.listEq('nutris', 'memberId', id)).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')); }
   async memberDiets(id) { return (await this.listEq('diets', 'memberId', id)).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')); }
   async memberRoutines(id) { return (await this.listEq('routines', 'memberId', id)).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')); }
   async memberSales(id) { return (await this.listEq('sales', 'memberId', id)).sort((a, b) => (b.date || '').localeCompare(a.date || '')); }

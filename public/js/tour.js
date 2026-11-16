@@ -16,7 +16,7 @@ export const TOURS = {
       { route: 'alumnos', sel: ['[data-tour="filters"]'], title: 'Tus alumnos', text: 'Filtra por activos, por vencer, vencidos, pausados o con deuda. Cada ficha tiene plan y pagos, sesiones, rutina, evaluaciones con gráficas, su bitácora de entrenos y salud (PAR-Q).' },
       { route: 'avisos', sel: ['[data-tour="rem-cats"]'], title: 'Recordatorios por WhatsApp', text: 'El sistema arma la lista del día: sesiones de mañana por confirmar, planes por vencer, pocas sesiones, deudas, cumpleaños, alumnos que dejaron de venir y a quién le toca reevaluarse. Envíalos uno tras otro con «Siguiente».' },
       { route: 'rutinas', sel: ['[data-tour="routines"]'], title: 'Rutinas para compartir', text: 'Más de 120 ejercicios con guía y plantillas listas. Asigna una rutina y el alumno la abre en su carnet con el modo «Entrenar»: marca series, cronómetro de descanso, cargas y video de cada ejercicio.' },
-      { route: 'alimentacion', sel: ['[data-tour="diets"]'], title: 'Planes de alimentación', text: 'Planes semanales o mensuales con porciones, calorías y lista de compras. Usa una plantilla o créalo a la medida de cada alumno: lo ve en su carnet, en «Comidas».' },
+      { route: 'alimentacion', sel: ['[data-tour="diets"]'], title: 'Alimentación y nutrición', text: 'Planes alimenticios (menú de cada día con porciones y lista de compras) y planes de nutrición (calorías, proteína, agua, suplementos y hábitos), semanales o mensuales. Tus alumnos los ven en su carnet, en «Comidas».' },
       { route: 'inicio', title: 'El carnet del alumno 📲', text: 'Cada alumno recibe un enlace con su QR, su plan, sus próximas sesiones, su rutina y «Mi progreso»: gráficas de peso, % de grasa y medidas, antes y ahora, meta y logros. También puede registrar su peso y sus entrenos, y tú lo ves en su bitácora.', final: true }
     ]
   },
@@ -33,7 +33,7 @@ export const TOURS = {
     name: 'Rutinas, evaluaciones y avances', desc: 'Plantillas, mediciones y lo que ve el alumno', icon: 'trend',
     steps: [
       { route: 'rutinas', sel: ['[data-tour="routines"]'], title: 'Plantillas', text: 'Crea tus plantillas (fuerza, hipertrofia, pérdida de grasa, principiante) y asígnalas con un toque. Ajusta series, repeticiones, descanso y carga para cada alumno.' },
-      { route: 'alimentacion', sel: ['[data-tour="diets"]'], title: 'Alimentación', text: '10 planes listos (bajar de peso, definición, masa muscular, vegetariano, criollo económico) y más de 80 alimentos. El generador ajusta las porciones a las calorías del alumno; luego cambias cualquier comida.' },
+      { route: 'alimentacion', sel: ['[data-tour="diets"]'], title: 'Alimentación y nutrición', text: '10 planes alimenticios y 8 planes de nutrición listos, más de 80 alimentos. Todo se ajusta al peso y las calorías del alumno. Si su plan incluye alimentación o nutrición y aún no se la asignas, aparece en «Pendientes».' },
       { route: 'alumnos', title: 'Evaluación física', text: 'En la ficha › Progreso: peso, estatura y perímetros. Calcula IMC, % de grasa, masa magra, riesgo por cintura, calorías y proteína según su objetivo.' },
       { route: 'alumnos', title: 'Lo que ve el alumno', text: 'Cada evaluación se publica en su carnet: gráficas, tabla de antes y ahora con flechas verdes o rojas según su objetivo, barra de meta y medallas por kilos y centímetros perdidos, sesiones y racha.', final: true }
     ]

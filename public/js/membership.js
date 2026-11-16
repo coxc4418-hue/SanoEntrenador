@@ -63,7 +63,7 @@ export async function sellModal(member = null, { planId = null, onDone = null } 
         return `<div class="section-title">${kd.label}</div><div class="plan-grid">${list.map((p) => `<button type="button" class="plan-opt ${p.id === plan.id ? 'on' : ''}" data-p="${esc(p.id)}" style="--pc:${p.color || 'var(--brand)'}">
           ${p.id === best?.id ? '<span class="plan-flag">Mejor precio por sesión</span>' : p.popular ? '<span class="plan-flag">Más vendido</span>' : ''}
           <b>${esc(p.name)}</b><span class="plan-price">${usd(p.price)}</span><small>${esc(kindTag(p))}${p.kind === 'sesiones' && p.visits ? ` · ${usd(p.price / p.visits)}/sesión` : ''}</small>
-          <span class="plan-tags">${p.online ? '<i>Online</i>' : ''}${p.kind === 'tiempo' && !p.online ? '<i>Ilimitado</i>' : ''}${p.freezeDays ? `<i>Pausa ${p.freezeDays} d</i>` : ''}</span>
+          <span class="plan-tags">${p.withDiet ? '<i>+ Plan alimenticio</i>' : ''}${p.withNutri ? '<i>+ Nutrición</i>' : ''}${p.online ? '<i>Online</i>' : ''}${p.kind === 'tiempo' && !p.online ? '<i>Ilimitado</i>' : ''}${p.freezeDays ? `<i>Pausa ${p.freezeDays} d</i>` : ''}</span>
         </button>`).join('')}</div>`;
       }).join('');
       m.el.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => { plan = plans.find((x) => x.id === b.dataset.p); if (plan.kind !== 'tiempo') start = todayKey(); else start = suggestStart(member); $('[data-start]').value = start; drawPlans(); calc(); });

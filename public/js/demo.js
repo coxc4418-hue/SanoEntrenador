@@ -5,11 +5,12 @@ import { fmtSeq, genCode, cardData, routineSummary, compactEval, refreshCards } 
 import { round2, nowISO, todayKey, dayKey, addDays, fromKey, sha256, scaleUSD } from './utils.js';
 import { planEnd, evalCalc, ROUTINE_TEMPLATES, exercise } from './gym.js';
 import { generateDiet, dietSummary, planEndKey } from './nutrition.js';
+import { generateNutri, nutriSummary } from './nutri.js';
 
 /** PIN de todas las demos (se muestra en pantalla) */
 export const DEMO_PIN = '1234';
 export const DEMO_MINUTES = 30;
-const DATA_COLLECTIONS = ['members', 'memberships', 'checkins', 'sessions', 'routines', 'diets', 'evaluations', 'photos', 'sales', 'reminders', 'remlog', 'config'];
+const DATA_COLLECTIONS = ['members', 'memberships', 'checkins', 'sessions', 'routines', 'diets', 'nutris', 'evaluations', 'photos', 'sales', 'reminders', 'remlog', 'config'];
 const BIZ = 'Rivas Training';
 const COACH = 'Carlos Rivas';
 
@@ -136,11 +137,11 @@ export async function seedDemoActivity() {
       const debt = s.debt ? money(s.debt) : 0;
       const price = Number(plan.price) || 0;
       const msId = 'demo_ms_' + s.k;
-      const ms = { id: msId, planId: plan.id, planName: plan.name, kind: plan.kind, start, end, visits, visitsLeft: visits, status: 'activa', freezeDays: Number(plan.freezeDays) || 0, freezeUsed: 0, frozenFrom: null, frozenUntil: null, online: !!plan.online };
+      const ms = { id: msId, planId: plan.id, planName: plan.name, kind: plan.kind, start, end, visits, visitsLeft: visits, status: 'activa', freezeDays: Number(plan.freezeDays) || 0, freezeUsed: 0, frozenFrom: null, frozenUntil: null, online: !!plan.online, withDiet: !!plan.withDiet, withNutri: !!plan.withNutri };
       if (s.frozen) { ms.frozenFrom = ago(3); ms.frozenUntil = dayKey(addDays(new Date(), 6)); ms.freezeUsed = 10; ms.end = dayKey(addDays(fromKey(end), 10)); }
       m.membership = ms; m.balance = debt; m.totalSpent = round2(price - debt);
       m.msDoc = { memberId: id, memberName: m.name, memberPhone: m.phone, memberIdDoc: m.idDoc, memberNumber: m.number, planId: plan.id, planName: plan.name, kind: plan.kind, start, end: ms.end, visits, visitsLeft: visits,
-        price, enrollFee: 0, discount: 0, total: price, paid: round2(price - debt), balance: debt, status: 'activa', online: !!plan.online,
+        price, enrollFee: 0, discount: 0, total: price, paid: round2(price - debt), balance: debt, status: 'activa', online: !!plan.online, withDiet: !!plan.withDiet, withNutri: !!plan.withNutri,
         freezes: s.frozen ? [{ from: ms.frozenFrom, until: ms.frozenUntil, days: 10, reason: 'Lesión' }] : [], saleIds: [], prev: null, renewal: s.since > s.start + 5, note: '', createdAt: at(s.start, 9).toISOString(), by: 'demo' };
       if (price - debt > 0) sale(m, s.start, [{ name: `${plan.name} · ${start.split('-').reverse().join('/')}`, price: round2(price - debt), planId: plan.id, kind: debt ? 'abono' : 'plan' }], methods[i % methods.length], { kind: debt ? 'abono' : 'plan', membershipId: msId, planId: plan.id });
       // Renovaciones anteriores (historial para reportes)
@@ -259,6 +260,23 @@ export async function seedDemoActivity() {
     diets[k] = data;
   }
 
+  // 4c) Planes de nutrición: una plantilla propia y los de algunos alumnos
+  const ntpl = generateNutri({ goal: 'Definición', weight: 75, kcal: 2000, trainDays: 5, period: 'mensual' });
+  put(store.ref('nutris', 'demo_ntpl'), { ...ntpl, name: 'Mi definición de verano', template: true, memberId: null, memberName: '', trainer: COACH, active: true, createdAt: nowISO(), updatedAt: nowISO(), by: 'demo' });
+  const nutris = {};
+  const NUTRIS = { andres: ['Ganar masa muscular', 'mensual', 9, 5], valeria: ['Bajar de peso', 'semanal', 2, 4], gabriela: ['Bajar de peso', 'mensual', 12, 3] };
+  for (const [k, [goal, period, startAgo, trainDays]] of Object.entries(NUTRIS)) {
+    const m = members[k]; if (!m) continue;
+    const w = m.lastEval?.weight || 70;
+    const kcal = (diets[k]?.kcal) || null;
+    const g = generateNutri({ goal, weight: w, kcal, period, trainDays });
+    const start = ago(startAgo); const end = planEndKey(start, period);
+    const data = { ...g, name: `${g.name} · ${m.name.split(' ')[0]}`, start, end, template: false, memberId: m.id, memberName: m.name, trainer: COACH, active: true, createdAt: at(startAgo, 11).toISOString(), updatedAt: nowISO(), by: 'demo' };
+    put(store.ref('nutris', 'demo_n_' + k), data);
+    Object.assign(m, { nutriId: 'demo_n_' + k, nutriName: data.name, nutriStart: start, nutriEnd: end, nutriPeriod: period });
+    nutris[k] = data;
+  }
+
   // 5) Planes, alumnos y recordatorios propios
   for (const s of MEMBERS) {
     const m = members[s.k];
@@ -276,7 +294,7 @@ export async function seedDemoActivity() {
   const live = MEMBERS.map((s) => store.member('demo_' + s.k) || { ...members[s.k] });
   for (let i = 0; i < live.length; i += 40) {
     const b = store.batch();
-    live.slice(i, i + 40).forEach((m) => { const s = MEMBERS.find((x) => 'demo_' + x.k === m.id); b.set(store.cardRef(m.cardCode), cardData(m, { ...(routines[s.k] ? { routine: routineSummary(routines[s.k]) } : {}), ...(diets[s.k] ? { diet: dietSummary(diets[s.k]) } : {}) })); });
+    live.slice(i, i + 40).forEach((m) => { const s = MEMBERS.find((x) => 'demo_' + x.k === m.id); b.set(store.cardRef(m.cardCode), cardData(m, { ...(routines[s.k] ? { routine: routineSummary(routines[s.k]) } : {}), ...(diets[s.k] ? { diet: dietSummary(diets[s.k]) } : {}), ...(nutris[s.k] ? { nutri: nutriSummary(nutris[s.k]) } : {}) })); });
     await b.commit();
   }
   const logs = [];

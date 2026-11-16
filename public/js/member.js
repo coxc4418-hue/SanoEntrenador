@@ -1,6 +1,6 @@
 // SanoEntrenador — Alumnos: buscador, formulario con foto y salud, ficha completa, progreso y carnet
 import { store, memberStatus, statusBadge, MEMBER_STATUS, daysBetween, SEX, DAYS_SHORT } from './store.js';
-import { saveMember, setMemberActive, renewCardCode, cardUrl, voidSale, setGoalWeight } from './ops.js';
+import { saveMember, setMemberActive, renewCardCode, cardUrl, voidSale, setGoalWeight, pendingExtras } from './ops.js';
 import { PARQ, CONDITIONS, GOALS, LEVELS, ACTIVITY, parqRisk, needsClearance, ageOf, evalCalc, SESSION_TYPES, ATT } from './gym.js';
 import { openModal, esc, usd, toast, setBusy, fmtDate, fmtDateTime, todayKey, dayKey, addDays, fromKey, loc, normalize, debounce, initials, colorFor, compressImage, confirmDialog, emptyState, methodLabel, waLink, printHTML, fmtAgo, num } from './utils.js';
 import { icon } from './icons.js';
@@ -205,7 +205,7 @@ export function heatmapHTML(days, weeks = 14) {
 // ======================================================================
 // FICHA DEL ALUMNO
 // ======================================================================
-const TABS = { resumen: 'Resumen', progreso: 'Progreso', rutina: 'Rutina', alimentacion: 'Alimentación', sesiones: 'Sesiones', plan: 'Plan y pagos', bitacora: 'Bitácora', salud: 'Salud' };
+const TABS = { resumen: 'Resumen', progreso: 'Progreso', rutina: 'Rutina', alimentacion: 'Alimentación', nutricion: 'Nutrición', sesiones: 'Sesiones', plan: 'Plan y pagos', bitacora: 'Bitácora', salud: 'Salud' };
 const LOG_KIND = { entreno: ['dumbbell', 'Entrenó'], peso: ['scale', 'Se pesó'], nota: ['edit', 'Nota'] };
 
 export async function openMember(id, { tab = 'resumen' } = {}) {
@@ -330,6 +330,8 @@ export async function openMember(id, { tab = 'resumen' } = {}) {
             <div><span>Meta</span><b>${mb.goalWeight ? num(mb.goalWeight, 1) + ' kg' : '—'}</b>${daysBetween(ev1.date, todayKey()) > (store.access.reevalDays || 30) ? '<span class="text-warning">toca reevaluar</span>' : ''}</div></div></div>` : `<div class="box">${icon('ruler')} Aún no tiene evaluación física. <button class="linkish" data-go="progreso">Hacer la primera</button></div>`}
         </div>
         <div class="stack">
+          ${mb.membership?.withDiet || mb.membership?.withNutri ? (() => { const pend = pendingExtras(mb); const row = (k, on, lab, tab, has) => (on ? `<div class="kv"><span>${icon(k)} ${lab}</span>${pend.includes(tab === 'alimentacion' ? 'diet' : 'nutri') ? `<button class="btn btn-primary btn-sm" data-go="${tab}">Asignar</button>` : `<b class="text-success">${icon('check')} ${esc(has || 'Asignado')}</b>`}</div>` : '');
+            return `<div class="card stack" data-incl><div class="card-title">${icon('ticket')} Su plan incluye</div>${row('utensils', mb.membership.withDiet, 'Plan alimenticio', 'alimentacion', mb.dietName)}${row('droplet', mb.membership.withNutri, 'Plan de nutrición', 'nutricion', mb.nutriName)}${pend.length ? '<div class="small text-warning">Pagó por esto y aún no lo tiene en su carnet.</div>' : ''}</div>`; })() : ''}
           <div class="card center stack" style="align-items:center">
             <div class="card-title">${icon('qr')} Carnet y avances</div>
             ${card ? `<img src="${card}" alt="QR" class="qr-img">` : ''}
@@ -390,7 +392,7 @@ export async function openMember(id, { tab = 'resumen' } = {}) {
       const list = await load('diets', () => store.memberDiets(mb.id));
       const D = await import('./diet.js'); const { removeMemberDiet } = await import('./ops.js');
       const cur = list.find((r) => r.id === mb.dietId) || null;
-      body.innerHTML = `<div class="between mb row-wrap"><div><b>${cur ? esc(cur.name) : 'Sin plan de alimentación'}</b>${cur ? `<div class="t-sub">${D.dietBadge(mb)}</div>` : ''}</div><div class="row row-wrap">
+      body.innerHTML = `${!mb.membership?.withDiet && !cur ? `<div class="box small mb">${icon('info')} Su plan actual no incluye plan alimenticio. Puedes asignárselo igual o venderle un plan que lo incluya.</div>` : ''}<div class="between mb row-wrap"><div><b>${cur ? esc(cur.name) : 'Sin plan de alimentación'}</b>${cur ? `<div class="t-sub">${D.dietBadge(mb)}</div>` : ''}</div><div class="row row-wrap">
         <button class="btn btn-secondary btn-sm" data-r="tpl">${icon('layers')} Desde plantilla</button><button class="btn btn-${cur ? 'secondary' : 'primary'} btn-sm" data-r="gen">${icon('sparkle')} A su medida</button>
         ${cur ? `<button class="btn btn-secondary btn-sm" data-r="edit">${icon('edit')} Editar</button><button class="btn btn-secondary btn-icon btn-sm" data-r="print" aria-label="Imprimir">${icon('print')}</button><button class="btn btn-whatsapp btn-sm" data-r="wa">${icon('whatsapp')} Avisar</button>` : ''}</div></div>
         <div data-dv>${cur ? '' : emptyState('utensils', 'Sin plan', 'Asígnale un plan semanal o mensual según su objetivo. Lo ve en su carnet, en «Comidas», con el menú de cada día y la lista de compras.')}</div>
@@ -405,6 +407,28 @@ export async function openMember(id, { tab = 'resumen' } = {}) {
       body.querySelector('[data-r="wa"]')?.addEventListener('click', () => composeWa({ ...mb, dietName: cur.name }, 'alimentacion'));
       body.querySelector('[data-r="off"]')?.addEventListener('click', async () => { if (!(await confirmDialog({ title: 'Quitar plan', message: 'El plan deja de verse en su carnet. Queda guardado en «Planes anteriores».', confirmText: 'Quitar' }))) return; await removeMemberDiet(mb); done(); });
       body.querySelectorAll('[data-again]').forEach((b) => b.onclick = async () => { const r = list.find((x) => x.id === b.dataset.again); const c = JSON.parse(JSON.stringify(r)); delete c.id; delete c.start; if (await D.dietEditor(c, { member: mb, fresh: true })) done(); });
+    },
+
+    async nutricion(body) {
+      const list = await load('nutris', () => store.memberNutris(mb.id));
+      const U = await import('./nutriui.js'); const { removeMemberNutri } = await import('./ops.js');
+      const cur = list.find((r) => r.id === mb.nutriId) || null;
+      const incl = mb.membership?.withNutri;
+      body.innerHTML = `${!incl && !cur ? `<div class="box small mb">${icon('info')} Su plan actual no incluye plan de nutrición. Puedes asignárselo igual o venderle un plan que lo incluya.</div>` : ''}
+        <div class="between mb row-wrap"><div><b>${cur ? esc(cur.name) : 'Sin plan de nutrición'}</b>${cur ? `<div class="t-sub">${U.nutriBadge(mb)}</div>` : ''}</div><div class="row row-wrap">
+        <button class="btn btn-secondary btn-sm" data-r="tpl">${icon('layers')} Desde plantilla</button><button class="btn btn-${cur ? 'secondary' : 'primary'} btn-sm" data-r="gen">${icon('sparkle')} A su medida</button>
+        ${cur ? `<button class="btn btn-secondary btn-sm" data-r="edit">${icon('edit')} Editar</button><button class="btn btn-secondary btn-icon btn-sm" data-r="print" aria-label="Imprimir">${icon('print')}</button><button class="btn btn-whatsapp btn-sm" data-r="wa">${icon('whatsapp')} Avisar</button>` : ''}</div></div>
+        <div data-nv>${cur ? U.nutriViewHTML(cur) : emptyState('droplet', 'Sin plan de nutrición', 'Calorías y proteína del día, agua, horarios, suplementos y hábitos. Lo ve en su carnet, en «Comidas › Nutrición», y marca sus hábitos cada día.')}</div>
+        ${cur ? '<button class="btn btn-ghost btn-sm mt text-danger" data-r="off">Quitar del carnet</button>' : ''}
+        ${list.filter((r) => r.id !== cur?.id).length ? `<div class="section-title mt-lg">Planes anteriores</div><div class="list">${list.filter((r) => r.id !== cur?.id).map((r) => `<div class="list-item"><div class="grow"><b>${esc(r.name)}</b><div class="t-sub">${r.start ? `${fmtDate(r.start)} → ${fmtDate(r.end)}` : fmtDate(r.createdAt)} · ${r.period === 'mensual' ? 'mensual' : 'semanal'}</div></div><button class="btn btn-ghost btn-sm" data-again="${r.id}">${icon('refresh')} Volver a usar</button></div>`).join('')}</div>` : ''}`;
+      const done = () => { cache.nutris = null; mb = store.member(mb.id) || mb; draw(); };
+      body.querySelector('[data-r="tpl"]').onclick = async () => { if (await U.assignNutriTemplate(mb)) done(); };
+      body.querySelector('[data-r="gen"]').onclick = async () => { const g = await U.nutriGenerator(mb); if (g && await U.nutriEditor(g, { member: mb, fresh: true })) done(); };
+      body.querySelector('[data-r="edit"]')?.addEventListener('click', async () => { if (await U.nutriEditor(cur, { member: mb })) done(); });
+      body.querySelector('[data-r="print"]')?.addEventListener('click', () => U.printNutri(cur, mb));
+      body.querySelector('[data-r="wa"]')?.addEventListener('click', () => composeWa({ ...mb, nutriName: cur.name }, 'nutricion'));
+      body.querySelector('[data-r="off"]')?.addEventListener('click', async () => { if (!(await confirmDialog({ title: 'Quitar plan', message: 'El plan deja de verse en su carnet. Queda guardado en «Planes anteriores».', confirmText: 'Quitar' }))) return; await removeMemberNutri(mb); done(); });
+      body.querySelectorAll('[data-again]').forEach((b) => b.onclick = async () => { const r = list.find((x) => x.id === b.dataset.again); const c = JSON.parse(JSON.stringify(r)); delete c.id; delete c.start; if (await U.nutriEditor(c, { member: mb, fresh: true })) done(); });
     },
 
     async sesiones(body) {

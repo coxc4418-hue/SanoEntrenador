@@ -39,7 +39,7 @@ export function pageHTML(d, { preview = false } = {}) {
     ${plans.length ? `<section class="cp-sec"><h2>${icon('ticket')} Planes</h2><div class="cp-plans">${plans.map((p) => `<article class="cp-plan ${p.popular ? 'pop' : ''}" style="--pc:${esc(p.color || '#f97316')}">
         ${p.popular ? '<span class="cp-pop">Más elegido</span>' : ''}<div class="cp-plan-h"><b>${esc(p.name)}</b>${p.online ? '<span class="cp-on">Online</span>' : ''}</div>
         <div class="cp-price">${usd(p.price)}</div>${perSes(p)}
-        <small class="cp-dur">${esc(planDuration(p))}</small>${p.note ? `<p>${esc(p.note)}</p>` : ''}
+        <small class="cp-dur">${esc(planDuration(p))}</small>${p.withDiet || p.withNutri ? `<ul class="cp-incl"><li>${icon('check')} Entrenamiento personalizado</li>${p.withDiet ? `<li>${icon('check')} Plan alimenticio</li>` : ''}${p.withNutri ? `<li>${icon('check')} Plan de nutrición</li>` : ''}</ul>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}
         ${planWa(p) ? `<a class="btn ${p.popular ? 'btn-primary' : 'btn-secondary'} btn-block" href="${planWa(p)}" target="_blank" rel="noopener">${icon('whatsapp')} Lo quiero</a>` : ''}</article>`).join('')}</div></section>` : ''}
     ${(d.places || []).length || d.address ? `<section class="cp-sec"><h2>${icon('pin')} Dónde entreno</h2><div class="cp-places">${[...(d.places || []), ...(d.address && !(d.places || []).includes(d.address) ? [d.address] : [])].map((x) => `<span>${icon('pin')} ${esc(x)}</span>`).join('')}</div></section>` : ''}
     <section class="cp-final"><h2>¿Empezamos?</h2><p>Escríbeme y armamos tu plan. La primera conversación no tiene compromiso.</p>${wa ? `<a class="btn btn-whatsapp btn-lg" href="${wa}" target="_blank" rel="noopener">${icon('whatsapp')} Escribir por WhatsApp</a>` : ''}</section>
@@ -70,7 +70,7 @@ export async function previewPage(photo = '') {
   const S = store.settings;
   const d = { coach: store.coachName, brand: store.businessName, specialty: S.specialty, bio: S.bio, certifications: S.certifications, city: S.city, address: S.address, instagram: S.instagram, whatsapp: S.whatsapp || S.phone, places: S.places || [], photo,
     hours: S.agenda ? { start: S.agenda.start, end: S.agenda.end, days: S.agenda.days } : null, students: store.activeMembers.length,
-    plans: S.page?.showPrices === false ? [] : store.activePlans.map((p) => ({ name: p.name, price: p.price, kind: p.kind, visits: p.visits, months: p.months, days: p.days, online: !!p.online, popular: !!p.popular, note: p.note || '', color: p.color })) };
+    plans: S.page?.showPrices === false ? [] : store.activePlans.map((p) => ({ name: p.name, price: p.price, kind: p.kind, visits: p.visits, months: p.months, days: p.days, online: !!p.online, popular: !!p.popular, withDiet: !!p.withDiet, withNutri: !!p.withNutri, note: p.note || '', color: p.color })) };
   const m = openModal({ title: 'Vista previa de tu página', size: 'lg', body: pageHTML(d, { preview: true }) });
   m.el.querySelector('.modal')?.classList.add('cp-modal');
 }

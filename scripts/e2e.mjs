@@ -117,6 +117,21 @@ try {
   ok('Plan semanal de 7 días', wk === 7);
 
   // ==================================================================
+  console.log('5c) Tarifas con plan alimenticio y de nutrición');
+  const full = { id: 'full40', name: 'Personalizado + alimenticio + nutrición', kind: 'tiempo', months: 1, days: 0, price: 40, color: '#8b5cf6', withDiet: true, withNutri: true, active: true };
+  await run(p, async ({ store }, f) => { await store.saveSettings({ plans: [...store.settings.plans, f] }); }, full);
+  await run(p, async ({ ops, store, utils }, a) => { await ops.sellMembership({ member: store.member(a.id), plan: store.plan(a.pid), start: utils.todayKey(), payments: [{ method: 'efectivo', amount: 1e9 }] }); }, { id: m.id, pid: full.id });
+  ok('La membresía guarda lo que incluye', await until(p, ({ store }, id) => { const x = store.member(id)?.membership; return x?.planId === 'full40' && x.withDiet && x.withNutri; }, m.id));
+  const pend = await run(p, async ({ ops, store }, id) => ops.pendingExtras(store.member(id)), m.id);
+  ok('Marca como pendiente solo la nutrición (ya tiene plan alimenticio)', JSON.stringify(pend) === '["nutri"]', JSON.stringify(pend));
+  const nt = await run(p, async ({ ops, store }, id) => { const n = await import('/js/nutri.js'); const g = n.generateNutri({ goal: 'Bajar de peso', weight: 70, period: 'mensual' }); const r = await ops.saveNutri(g, null, store.member(id)); return { kcal: r.kcal, protein: r.protein, habits: r.habits.length, end: r.end }; }, m.id);
+  ok('Asigna un plan de nutrición mensual', nt.kcal > 1000 && nt.protein > 100 && nt.habits >= 5 && !!nt.end, JSON.stringify(nt));
+  ok('La nutrición llega al carnet', await until(p, async ({ fb }, c) => { const d = (await fb.getDoc(fb.doc(fb.db, 'cards', c))).data(); return (d?.nutri?.habits || []).length >= 5 && d?.nutri?.phases?.length === 4 && d?.plan?.withNutri === true; }, m.cardCode));
+  ok('Ya no queda nada pendiente', await until(p, async ({ ops, store }, id) => ops.pendingExtras(store.member(id)).length === 0, m.id));
+  await run(p, async ({ ops }) => { const n = await import('/js/nutri.js'); await ops.saveNutri({ ...n.nutriTemplates()[2], name: 'Mi nutrición E2E' }); });
+  ok('Guarda plantillas de nutrición propias', await until(p, ({ store }) => store.nutriTemplates.some((x) => x.name === 'Mi nutrición E2E')));
+
+  // ==================================================================
   console.log('6) Vistas del entrenador');
   for (const v of ['inicio', 'agenda', 'asistencia', 'alumnos', 'rutinas', 'alimentacion', 'avisos', 'cobros', 'reportes', 'ajustes']) {
     await p.evaluate((v) => { import('/js/main.js').then((x) => x.navigate(v)); }, v); await sleep(1300);
@@ -135,14 +150,18 @@ try {
   ok('Publica su página', slug === 'coach-prueba-e2e', slug);
   const pub = await newPage(true);
   await pub.p.goto(`${ROOT}/coach/${slug}?emu=1`, { waitUntil: 'networkidle2' }); await sleep(2000);
-  ok('La página pública abre sin sesión', /WhatsApp/i.test(await text(pub.p)));
+  const ctext = await text(pub.p);
+  ok('La página pública abre sin sesión', /WhatsApp/i.test(ctext));
+  ok('La página muestra lo que incluye cada plan', /Plan de nutrición/.test(ctext) && /Plan alimenticio/.test(ctext));
   await pub.p.screenshot({ path: path.join(OUT, 'e2e-03-coach.png'), fullPage: true });
 
   // ==================================================================
   console.log('8) Portal del alumno (sin cuenta)');
   await pub.p.goto(`${ROOT}/alumno/${m.cardCode}?emu=1`, { waitUntil: 'networkidle2' });
   await pub.p.waitForSelector('.pt-nav', { timeout: 20000 }).catch(() => {});
-  ok('El alumno abre su carnet', /Laura/.test(await text(pub.p)));
+  const home = await text(pub.p);
+  ok('El alumno abre su carnet', /Laura/.test(home));
+  ok('Su carnet dice qué incluye su plan', /Plan alimenticio/.test(home) && /Plan de nutrición/.test(home) && /Mis hábitos de hoy/.test(home));
   await pub.p.evaluate(() => document.querySelector('.pt-nav [data-t="progreso"]').click()); await sleep(900);
   const pt = await text(pub.p);
   ok('Ve su progreso en peso y medidas', /1,6\s*kg/.test(pt) && /cm/.test(pt));
@@ -166,6 +185,14 @@ try {
   await pub.p.evaluate(() => document.querySelector('[data-mk="0"]')?.click()); await sleep(500);
   ok('Marca una comida como cumplida', /1 de 4 comidas cumplidas/.test(await text(pub.p)));
   await pub.p.screenshot({ path: path.join(OUT, 'e2e-04b-portal-comidas.png'), fullPage: true });
+  await pub.p.evaluate(() => document.querySelector('[data-cs="nutri"]')?.click()); await sleep(700);
+  const nx = await text(pub.p);
+  ok('Ve su plan de nutrición en «Comidas › Nutrición»', /Mis metas de cada día/.test(nx) && /Suplementos/.test(nx) && /Prioriza/.test(nx) && /semana a semana/i.test(nx));
+  await pub.p.evaluate(() => document.querySelector('[data-hb="0"]')?.click()); await sleep(500);
+  await pub.p.evaluate(() => document.querySelector('[data-gl="1"]')?.click()); await sleep(500);
+  const nx2 = await text(pub.p);
+  ok('Marca hábitos y vasos de agua', /1\/\d+/.test(nx2) && /0,5 \//.test(nx2), nx2.match(/\d,?\d* \/ [\d,]+ L/)?.[0]);
+  await pub.p.screenshot({ path: path.join(OUT, 'e2e-04c-portal-nutricion.png'), fullPage: true });
   ok('Un extraño no puede modificar el carnet', bad);
   await pub.ctx.close();
 

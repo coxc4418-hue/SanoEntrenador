@@ -87,11 +87,21 @@ await page.evaluate(() => [...document.querySelectorAll('.modal [data-ok]')].pop
 await check('alim-editor');
 await page.evaluate(() => document.querySelector('.modal [data-iadd="0"]').click()); await sleep(600);
 await check('alim-buscar-alimento', false); await closeModals();
+await page.evaluate(() => document.querySelector('#nt-tabs [data-t="nutricion"]').click()); await sleep(600);
+await check('nutri-plantillas');
+await page.evaluate(() => document.querySelector('#nt-b [data-ni="0"]').click()); await sleep(700);
+await check('nutri-plantilla'); await closeModals();
+await page.evaluate(() => document.querySelector('#nt-b [data-ngen]').click()); await sleep(700);
+await check('nutri-generador');
+await page.evaluate(() => [...document.querySelectorAll('.modal [data-ok]')].pop().click()); await sleep(900);
+await check('nutri-editor'); await closeModals();
+await page.evaluate(() => document.querySelector('#nt-tabs [data-t="asignados"]').click()); await sleep(600);
+await check('alim-pendientes', false);
 // Ficha del alumno: todas las pestañas
-const mid = await page.evaluate(async () => { const { store } = await import('/js/store.js'); const m = store.members.find((x) => (x.evalHist || []).length > 2) || store.members[0]; return m.id; });
+const mid = await page.evaluate(async () => { const { store } = await import('/js/store.js'); const m = store.members.find((x) => x.nutriId && x.dietId && (x.evalHist || []).length > 2) || store.members.find((x) => (x.evalHist || []).length > 2) || store.members[0]; return m.id; });
 await page.evaluate(async (id) => (await import('/js/member.js')).openMember(id), mid); await sleep(1500);
-for (const t of ['resumen', 'progreso', 'rutina', 'alimentacion', 'sesiones', 'plan', 'bitacora', 'salud']) {
-  await page.evaluate((t) => document.querySelector(`.modal [data-tab="${t}"], .modal [data-t="${t}"]`)?.click(), t); await sleep(700); await check('alumno-' + t, ['resumen', 'progreso', 'rutina', 'alimentacion'].includes(t));
+for (const t of ['resumen', 'progreso', 'rutina', 'alimentacion', 'nutricion', 'sesiones', 'plan', 'bitacora', 'salud']) {
+  await page.evaluate((t) => document.querySelector(`.modal [data-tab="${t}"], .modal [data-t="${t}"]`)?.click(), t); await sleep(700); await check('alumno-' + t, ['resumen', 'progreso', 'rutina', 'alimentacion', 'nutricion'].includes(t));
 }
 await closeModals();
 // Portal del alumno
@@ -103,7 +113,7 @@ portal.on('console', (m) => { if (m.type() === 'error' && !/favicon|net::|Failed
 const pcheck = async (label) => { const m = await portal.evaluate(measure, W); const bad = m.sw > W + 1 || m.over.length; if (bad) { fails++; console.log(`✗ ${label}`, m.over); } else console.log(`✓ ${label}`); await portal.screenshot({ path: path.join(OUT, `${label}.png`), fullPage: true }); };
 await portal.goto(`${BASE}/alumno/${code}?emu=1`, { waitUntil: 'networkidle2' }); await sleep(2500);
 await pcheck('portal-inicio');
-for (const t of ['comidas', 'progreso', 'historial', 'entrenar']) { await portal.evaluate((t) => document.querySelector(`.pt-nav [data-t="${t}"]`).click(), t); await sleep(900); await pcheck('portal-' + t); }
+for (const t of ['comidas', 'progreso', 'historial', 'entrenar']) { await portal.evaluate((t) => document.querySelector(`.pt-nav [data-t="${t}"]`).click(), t); await sleep(900); await pcheck('portal-' + t); if (t === 'comidas') { await portal.evaluate(() => document.querySelector('[data-cs="nutri"]')?.click()); await sleep(700); await pcheck('portal-nutricion'); } }
 await portal.evaluate(() => document.querySelector('[data-start]')?.click()); await sleep(800);
 await portal.evaluate(() => document.querySelector('[data-set="0-0"]')?.click()); await sleep(900);
 await pcheck('portal-entrenando');

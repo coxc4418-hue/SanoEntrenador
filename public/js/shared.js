@@ -101,6 +101,7 @@ export function msgVars(member = {}, { session = null, extra = {} } = {}) {
     enlace: cardLink(member),
     rutina: member.routineName || '',
     alimentacion: member.dietName || '',
+    nutricion: member.nutriName || '',
     resultados: '',
     ...extra
   };

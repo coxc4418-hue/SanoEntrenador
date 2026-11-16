@@ -20,8 +20,8 @@ export function mount(el) {
     const from = new Date(); from.setMonth(from.getMonth() - 5, 1); from.setHours(0, 0, 0, 0);
     try {
       [sales, checkins] = await Promise.all([store.salesBetween(from.toISOString(), new Date().toISOString()), store.listBetween('checkins', 'date', from.toISOString(), new Date().toISOString())]);
-    } catch (e) { el.querySelector('[data-body]').innerHTML = emptyState('alert', 'No se pudieron cargar los datos', esc(e.message)); return; }
-    if (!el.isConnected) return;
+    } catch (e) { const b = el.querySelector('[data-body]'); if (b) b.innerHTML = emptyState('alert', 'No se pudieron cargar los datos', esc(e.message)); return; }
+    if (!el.isConnected || !el.querySelector('[data-body]')) return;
     draw(from);
   })();
 

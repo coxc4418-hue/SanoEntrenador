@@ -105,7 +105,7 @@ export function mount(el, { params = {} }) {
       const plans = s().plans; const svcs = s().services || [];
       body.innerHTML = `<div class="card stack">
         <div class="between row-wrap"><div><div class="card-title">${icon('ticket')} Tus planes</div><p class="small muted" style="margin:4px 0 0">Paquetes de sesiones (8, 12, 20), mensualidad ilimitada, sesión suelta, asesoría online o en pareja.</p></div><button class="btn btn-primary" id="p-add">${icon('plus')} Nuevo plan</button></div>
-        <div class="list">${plans.map((p) => `<div class="list-item" style="${p.active === false ? 'opacity:.5' : ''}"><span class="plan-dot" style="background:${p.color || 'var(--brand)'}"></span><div class="grow" style="min-width:0"><b class="ellipsis">${esc(p.name)}${p.popular ? ' <span class="badge badge-success">Más vendido</span>' : ''}${p.online ? ' <span class="badge badge-info">Online</span>' : ''}${p.active === false ? ' <span class="badge badge-neutral">Inactivo</span>' : ''}</b><div class="t-sub">${esc(PLAN_KINDS[p.kind]?.label || '')} · ${esc(planDuration(p))}${p.kind === 'sesiones' ? ` · ${p.visits} sesiones · ${usd(p.price / (p.visits || 1))} c/u` : ''}${p.freezeDays ? ` · pausa hasta ${p.freezeDays} días` : ''}</div></div><b class="num">${usd(p.price)}</b><button class="btn btn-ghost btn-sm" data-ep="${esc(p.id)}" aria-label="Editar">${icon('edit')}</button></div>`).join('')}</div>
+        <div class="list">${plans.map((p) => `<div class="list-item" style="${p.active === false ? 'opacity:.5' : ''}"><span class="plan-dot" style="background:${p.color || 'var(--brand)'}"></span><div class="grow" style="min-width:0"><b class="ellipsis">${esc(p.name)}${p.popular ? ' <span class="badge badge-success">Más vendido</span>' : ''}${p.online ? ' <span class="badge badge-info">Online</span>' : ''}${p.withDiet ? ' <span class="badge badge-warning">+ Alimenticio</span>' : ''}${p.withNutri ? ' <span class="badge badge-violet">+ Nutrición</span>' : ''}${p.active === false ? ' <span class="badge badge-neutral">Inactivo</span>' : ''}</b><div class="t-sub">${esc(PLAN_KINDS[p.kind]?.label || '')} · ${esc(planDuration(p))}${p.kind === 'sesiones' ? ` · ${p.visits} sesiones · ${usd(p.price / (p.visits || 1))} c/u` : ''}${p.freezeDays ? ` · pausa hasta ${p.freezeDays} días` : ''}</div></div><b class="num">${usd(p.price)}</b><button class="btn btn-ghost btn-sm" data-ep="${esc(p.id)}" aria-label="Editar">${icon('edit')}</button></div>`).join('')}</div>
       </div>
       <div class="grid-2 mt-lg">
         <form class="card stack" id="f-enroll"><div class="card-title">${icon('userPlus')} Inscripción</div>
@@ -255,7 +255,7 @@ export function mount(el, { params = {} }) {
         setBusy(btn, true, 'Preparando…');
         try {
           const { getDocs } = await import('../firebase.js');
-          const names = ['memberships', 'sessions', 'checkins', 'routines', 'diets', 'evaluations', 'sales', 'reminders'];
+          const names = ['memberships', 'sessions', 'checkins', 'routines', 'diets', 'nutris', 'evaluations', 'sales', 'reminders'];
           const all = async (n) => (await getDocs(store.col(n))).docs.map((d) => ({ id: d.id, ...d.data() }));
           const got = await Promise.all(names.map(all));
           const data = { app: 'SanoEntrenador', exportedAt: nowISO(), business: store.businessName, settings: store.settings, members: store.members };
@@ -284,6 +284,9 @@ export function mount(el, { params = {} }) {
         <div class="field"><label>Color</label><div class="row">${PLAN_COLORS.map((c) => `<label class="color-dot"><input type="radio" name="color" value="${c}" ${x.color === c ? 'checked' : ''} hidden><span style="background:${c}"></span></label>`).join('')}</div></div>
         <div class="field full"><label>Qué incluye (opcional)</label><input class="input" name="note" value="${esc(x.note || '')}" placeholder="Ej.: Rutina personalizada + evaluación mensual"></div>
       </div>
+      <div class="box small"><b>${icon('plus')} Servicios incluidos</b> <span class="muted">(además del entrenamiento)</span>
+        <label class="check mt"><input type="checkbox" name="withDiet" ${x.withDiet ? 'checked' : ''}> ${icon('utensils')} Incluye plan alimenticio (menú de cada día)</label>
+        <label class="check"><input type="checkbox" name="withNutri" ${x.withNutri ? 'checked' : ''}> ${icon('droplet')} Incluye plan de nutrición (metas, suplementos y hábitos)</label></div>
       <label class="check"><input type="checkbox" name="online" ${x.online ? 'checked' : ''}> Plan online (rutina y seguimiento a distancia)</label>
       <label class="check"><input type="checkbox" name="popular" ${x.popular ? 'checked' : ''}> Destacar como “más vendido”</label>
       <label class="check"><input type="checkbox" name="active" ${x.active !== false ? 'checked' : ''}> Activo (se ofrece al cobrar y en tu página)</label>
@@ -305,7 +308,7 @@ export function mount(el, { params = {} }) {
       const plan = { ...(p || {}), id: p?.id || shortId(6), name, kind: F.kind.value, price: round2(parseNum(F.price.value)), color: F.color.value || PLAN_COLORS[0],
         months: F.kind.value !== 'pase' && F.unit.value === 'months' ? len : 0, days: F.kind.value === 'pase' ? 1 : F.unit.value === 'days' ? len : 0,
         visits: F.kind.value === 'sesiones' ? Math.max(1, Math.round(parseNum(F.visits.value)) || 1) : F.kind.value === 'pase' ? 1 : null,
-        freezeDays: Math.max(0, Math.round(parseNum(F.freezeDays.value)) || 0), note: F.note.value.trim(), online: F.online.checked, popular: F.popular.checked, active: F.active.checked };
+        freezeDays: Math.max(0, Math.round(parseNum(F.freezeDays.value)) || 0), note: F.note.value.trim(), withDiet: F.withDiet.checked, withNutri: F.withNutri.checked, online: F.online.checked, popular: F.popular.checked, active: F.active.checked };
       const plans = p ? s().plans.map((y) => (y.id === p.id ? plan : y)) : [...s().plans, plan];
       await store.saveSettings({ plans }); m.close(); toast('Plan guardado');
       if (s().page?.published && !store.isDemo) publishPage({ ...s().page }).catch(() => {});

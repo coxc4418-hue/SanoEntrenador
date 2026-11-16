@@ -4,6 +4,7 @@ import { store, memberStatus, daysBetween, LIVE_STATUS } from './store.js';
 import { round2, round4, nowISO, todayKey, dayKey, addDays, fromKey, loc, usd, fmtDate, shortId } from './utils.js';
 import { planEnd, evalCalc, exercise } from './gym.js';
 import { dietSummary, planEndKey } from './nutrition.js';
+import { nutriSummary } from './nutri.js';
 
 export const APP_URL = 'https://sano-entrenador.web.app';
 export const by = () => (auth.currentUser?.isAnonymous ? 'demo' : (auth.currentUser?.email || '').split('@')[0] || '—');
@@ -84,7 +85,7 @@ export function cardData(m, extra = {}) {
   return {
     tenantId: store.tenantId, coach: store.coachName, brand: store.businessName, coachPhone: S.whatsapp || S.phone || '', coachIg: S.instagram || '', specialty: S.specialty || '',
     country: S.country || '', name: first.length > 1 ? `${first[0]} ${first[first.length - 1]}` : first[0] || 'Alumno', number: m.number || '',
-    active: m.active !== false, plan: ms ? { name: ms.planName, kind: ms.kind, start: ms.start, end: ms.end, visitsLeft: ms.visitsLeft ?? null, visits: ms.visits ?? null, frozenFrom: ms.frozenFrom || null, frozenUntil: ms.frozenUntil || null, status: ms.status || 'activa', online: !!ms.online } : null,
+    active: m.active !== false, plan: ms ? { name: ms.planName, kind: ms.kind, start: ms.start, end: ms.end, visitsLeft: ms.visitsLeft ?? null, visits: ms.visits ?? null, frozenFrom: ms.frozenFrom || null, frozenUntil: ms.frozenUntil || null, status: ms.status || 'activa', online: !!ms.online, withDiet: !!ms.withDiet, withNutri: !!ms.withNutri } : null,
     debt: (Number(m.balance) || 0) > 0.009, visits: Number(m.visits) || 0, lastCheckinAt: m.lastCheckinAt || null, since: m.createdAt || null,
     goal: m.goal || '', goalWeight: Number(m.goalWeight) || null, sex: m.sex || '', height: m.height || null,
     evals: (m.evalHist || []).slice(-36), lastEval: m.lastEval || null, next: upcomingFor(m.id),
@@ -206,7 +207,7 @@ function snapOf(msId, plan, q, extra = {}) {
   return {
     id: msId, planId: plan.id, planName: plan.name, kind: plan.kind, start: q.start, end: q.end,
     visits: plan.kind === 'tiempo' ? null : Number(plan.visits) || 1, visitsLeft: plan.kind === 'tiempo' ? null : Number(plan.visits) || 1,
-    status: 'activa', freezeDays: Number(plan.freezeDays) || 0, freezeUsed: 0, frozenFrom: null, frozenUntil: null, online: !!plan.online, ...extra
+    status: 'activa', freezeDays: Number(plan.freezeDays) || 0, freezeUsed: 0, frozenFrom: null, frozenUntil: null, online: !!plan.online, withDiet: !!plan.withDiet, withNutri: !!plan.withNutri, ...extra
   };
 }
 /**
@@ -239,7 +240,7 @@ export async function sellMembership({ member, plan, start, discount = 0, enroll
   const visits = plan.kind === 'tiempo' ? null : (Number(plan.visits) || 1) + leftover;
   const ms = {
     ...memberFields(m), planId: plan.id, planName: plan.name, kind: plan.kind, start: q.start, end: q.end, visits, visitsLeft: visits, carried: leftover,
-    price: q.price, enrollFee: q.enrollFee, discount: q.discount, total: q.total, paid: pay, balance, status: 'activa', online: !!plan.online,
+    price: q.price, enrollFee: q.enrollFee, discount: q.discount, total: q.total, paid: pay, balance, status: 'activa', online: !!plan.online, withDiet: !!plan.withDiet, withNutri: !!plan.withNutri,
     freezes: [], saleIds: sale ? [sale.id] : [], prev: cur || null, renewal: !!(cur && cur.status !== 'anulada'), note, createdAt: date, by: by()
   };
   b.set(msRef, ms);
@@ -578,6 +579,55 @@ export async function removeMemberDiet(member) {
   await store.commit(b);
 }
 export async function deleteDiet(d) { await store.remove('diets', d.id); }
+// ======================================================================
+// PLANES DE NUTRICIÓN (metas, horarios, suplementos y hábitos). El del alumno se publica en su carnet.
+// ======================================================================
+const txt = (v, n = 200) => String(v ?? '').trim().slice(0, n);
+const lines = (a) => (Array.isArray(a) ? a : String(a || '').split('\n')).map((x) => txt(x)).filter(Boolean).slice(0, 14);
+const numOr = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return n > 0 ? Math.round(n * 10) / 10 : null; };
+export function cleanNutri(d) {
+  return {
+    name: txt(d.name, 90) || 'Plan de nutrición', goal: txt(d.goal, 60), type: d.type === 'veg' ? 'veg' : 'todo', period: d.period === 'mensual' ? 'mensual' : 'semanal',
+    weight: numOr(d.weight), kcal: Math.round(numOr(d.kcal) || 0) || null, protein: Math.round(numOr(d.protein) || 0) || null, carbs: Math.round(numOr(d.carbs) || 0) || null, fat: Math.round(numOr(d.fat) || 0) || null,
+    pkg: numOr(d.pkg), fkg: numOr(d.fkg), water: numOr(d.water), fiber: Math.round(numOr(d.fiber) || 0) || null, meals: Number(d.meals) || null, trainDays: Number(d.trainDays) || null,
+    timing: (d.timing || []).map((t) => ({ when: txt(t.when, 80), text: txt(t.text, 240) })).filter((t) => t.when || t.text).slice(0, 12),
+    supplements: (d.supplements || []).map((x) => ({ name: txt(x.name, 80), dose: txt(x.dose, 80), when: txt(x.when, 160) })).filter((x) => x.name).slice(0, 10),
+    prioritize: lines(d.prioritize), moderate: lines(d.moderate), avoid: lines(d.avoid), habits: lines(d.habits),
+    phases: (d.phases || []).map((x) => ({ title: txt(x.title, 80), text: txt(x.text, 260) })).filter((x) => x.title || x.text).slice(0, 4),
+    note: txt(d.note, 600), params: d.params || null
+  };
+}
+export async function saveNutri(data, id = null, member = null) {
+  const d = cleanNutri(data);
+  if (!d.kcal && !d.protein && !d.habits.length && !d.timing.length) throw new Error('Indica al menos las calorías o los hábitos del plan.');
+  if (member) { d.start = data.start || todayKey(); d.end = planEndKey(d.start, d.period); }
+  const b = store.batch();
+  const ref = id ? store.ref('nutris', id) : store.newRef('nutris');
+  const docData = { ...d, template: !member, memberId: member?.id || null, memberName: member?.name || '', trainer: store.coachName, active: true, updatedAt: nowISO(), ...(id ? {} : { createdAt: nowISO(), by: by() }) };
+  b.set(ref, docData, { merge: true });
+  if (member) {
+    b.set(store.ref('members', member.id), { nutriId: ref.id, nutriName: d.name, nutriStart: d.start, nutriEnd: d.end, nutriPeriod: d.period, updatedAt: nowISO() }, { merge: true });
+    putCard(b, member, { nutri: nutriSummary(docData) });
+  }
+  await store.commit(b);
+  return { id: ref.id, ...docData };
+}
+export async function removeMemberNutri(member) {
+  const b = store.batch();
+  b.set(store.ref('members', member.id), { nutriId: null, nutriName: '', nutriStart: null, nutriEnd: null, nutriPeriod: null, updatedAt: nowISO() }, { merge: true });
+  putCard(b, member, { nutri: null });
+  await store.commit(b);
+}
+export async function deleteNutri(d) { await store.remove('nutris', d.id); }
+/** Lo que el plan del alumno incluye y aún no se le ha asignado */
+export function pendingExtras(m, today = todayKey()) {
+  const ms = m?.membership;
+  if (!ms || ms.status === 'anulada' || (ms.end && ms.end < today) || m.active === false) return [];
+  const out = [];
+  if (ms.withDiet && (!m.dietId || (m.dietEnd && m.dietEnd < today))) out.push('diet');
+  if (ms.withNutri && (!m.nutriId || (m.nutriEnd && m.nutriEnd < today))) out.push('nutri');
+  return out;
+}
 export const exLine = (id, sets = 3, reps = '12', rest = 60) => { const e = exercise(id); return { exId: id, name: e?.name || id, sets, reps, rest, weight: '', note: '' }; };
 
 // ======================================================================
@@ -662,7 +712,7 @@ export async function publishPage({ slug, published = true, showPrices = true, p
     tenantId: store.tenantId, slug: s, published, coach: store.coachName, brand: store.businessName, specialty: S.specialty || '', bio: S.bio || '', certifications: S.certifications || '',
     city: S.city || '', address: S.address || '', instagram: S.instagram || '', whatsapp: S.whatsapp || S.phone || '', country: S.country || '', currency: S.currency || '',
     places: S.places || [], hours: S.agenda ? { start: S.agenda.start, end: S.agenda.end, days: S.agenda.days } : null, photo: photo || S.page?.photo || '',
-    plans: showPrices ? store.activePlans.map((p) => ({ name: p.name, price: p.price, kind: p.kind, visits: p.visits || null, months: p.months || 0, days: p.days || 0, online: !!p.online, popular: !!p.popular, note: p.note || '', color: p.color || '' })) : [],
+    plans: showPrices ? store.activePlans.map((p) => ({ name: p.name, price: p.price, kind: p.kind, visits: p.visits || null, months: p.months || 0, days: p.days || 0, online: !!p.online, popular: !!p.popular, withDiet: !!p.withDiet, withNutri: !!p.withNutri, note: p.note || '', color: p.color || '' })) : [],
     students: store.activeMembers.length, updatedAt: nowISO()
   });
   if (old) b.delete(old);

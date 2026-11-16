@@ -16,8 +16,8 @@ export const DEFAULT_PLANS = [
   { id: 'p12', name: '12 sesiones (3 por semana)', kind: 'sesiones', visits: 12, days: 30, price: 84, color: '#f97316', freezeDays: 7, popular: true },
   { id: 'p20', name: '20 sesiones (5 por semana)', kind: 'sesiones', visits: 20, days: 35, price: 120, color: '#f43f5e', freezeDays: 10 },
   { id: 'mensual', name: 'Mensual presencial ilimitado', kind: 'tiempo', months: 1, price: 140, color: '#8b5cf6', freezeDays: 7 },
-  { id: 'online', name: 'Asesoría online mensual', kind: 'tiempo', months: 1, price: 35, color: '#14b8a6', online: true, note: 'Rutina personalizada, ajustes semanales y seguimiento por WhatsApp' },
-  { id: 'online3', name: 'Asesoría online trimestral', kind: 'tiempo', months: 3, price: 90, color: '#22c55e', online: true, freezeDays: 15 },
+  { id: 'online', name: 'Asesoría online mensual', kind: 'tiempo', months: 1, price: 35, color: '#14b8a6', online: true, withDiet: true, note: 'Rutina personalizada, ajustes semanales y seguimiento por WhatsApp' },
+  { id: 'online3', name: 'Asesoría online trimestral', kind: 'tiempo', months: 3, price: 90, color: '#22c55e', online: true, withDiet: true, withNutri: true, freezeDays: 15 },
   { id: 'duo', name: 'Pareja · 12 sesiones (por persona)', kind: 'sesiones', visits: 12, days: 30, price: 65, color: '#ec4899', note: 'Entrenan juntos en la misma sesión' }
 ];
 
@@ -36,6 +36,7 @@ export const DEFAULT_MSGS = {
   deuda: { label: 'Recordar pago', text: 'Hola {nombre} 👋, te recuerdo que tienes un saldo pendiente de *{monto}* de tu plan *{plan}*.\n\nPuedes pagarme por transferencia o en la próxima sesión. ¡Gracias!' },
   cumple: { label: 'Cumpleaños', text: '🎉 ¡Feliz cumpleaños, {nombre}! 🎂\n\nQue este año venga con mucha salud, energía y nuevas marcas personales. ¡A celebrarlo con un buen entreno! 💪\n— {entrenador}' },
   rutina: { label: 'Rutina nueva', text: 'Hola {nombre} 📋, tu rutina *{rutina}* ya está lista.\n\nÁbrela en tu carnet, toca «Entrenar» y marca cada serie: ahí tienes el cronómetro de descanso y cómo se hace cada ejercicio.\n{enlace}\n\n¡A darle! 🔥' },
+  nutricion: { label: 'Plan de nutrición', text: 'Hola {nombre} 💧, tu plan de nutrición *{nutricion}* ya está listo.\n\nÁbrelo en tu carnet, en «Comidas › Nutrición»: tus calorías y proteína del día, el agua, los horarios, los suplementos y tus hábitos para marcar cada día.\n{enlace}\n\n¡Constancia y resultados! 💪' },
   alimentacion: { label: 'Plan de alimentación', text: 'Hola {nombre} 🥗, tu plan de alimentación *{alimentacion}* ya está listo.\n\nÁbrelo en tu carnet, en la pestaña «Comidas»: ahí ves el menú de cada día con sus porciones y la lista de compras de la semana.\n{enlace}\n\n¡Vamos con todo! 💪' },
   reevaluar: { label: 'Toca evaluación', text: 'Hola {nombre} 📏, ya toca tu evaluación para medir tus avances (peso, medidas y % de grasa).\n\n¿Qué día te queda bien esta semana?' },
   progreso: { label: 'Resultados de evaluación', text: 'Hola {nombre} 📊, estos son tus resultados:\n\n{resultados}\n\nMira tus gráficas, medidas y logros en tu carnet: {enlace}\n\n¡Sigue así! 💪' },
@@ -73,6 +74,10 @@ export function planEnd(plan, start) {
   }
   else { e = new Date(y, m - 1, d + Math.max(1, Number(plan.days) || 30) - 1); }
   return `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, '0')}-${String(e.getDate()).padStart(2, '0')}`;
+}
+/** Servicios extra que incluye el plan (además del entrenamiento) */
+export function planExtras(p) {
+  return [p?.withDiet ? 'Plan alimenticio' : '', p?.withNutri ? 'Plan de nutrición' : ''].filter(Boolean);
 }
 export function planDuration(p) {
   if (p.kind === 'pase') return '1 día';

@@ -1,10 +1,10 @@
 // SanoEntrenador — Service Worker (PWA, funcionamiento sin conexión)
-const VERSION = 'sanoentrenador-v1.1.0';
+const VERSION = 'sanoentrenador-v1.2.0';
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const VIEWS = ['dashboard', 'agenda', 'checkin', 'members', 'routines', 'nutrition', 'reminders', 'payments', 'reports', 'settings', 'admin', 'search', 'card', 'coach'];
 const SHELL = [
   '/', '/index.html', '/manifest.webmanifest', '/css/app.css',
-  '/js/main.js', '/js/firebase.js', '/js/store.js', '/js/auth.js', '/js/utils.js', '/js/icons.js', '/js/shared.js', '/js/ops.js', '/js/demo.js', '/js/gym.js', '/js/nutrition.js', '/js/diet.js', '/js/member.js', '/js/membership.js', '/js/access.js', '/js/routine.js', '/js/evals.js', '/js/pay.js', '/js/install.js', '/js/tour.js', '/js/bcv.js', '/js/progress.js', '/js/exguide.js', '/js/reminders.js', '/js/vendor/qrcode.js',
+  '/js/main.js', '/js/firebase.js', '/js/store.js', '/js/auth.js', '/js/utils.js', '/js/icons.js', '/js/shared.js', '/js/ops.js', '/js/demo.js', '/js/gym.js', '/js/nutrition.js', '/js/diet.js', '/js/nutri.js', '/js/nutriui.js', '/js/member.js', '/js/membership.js', '/js/access.js', '/js/routine.js', '/js/evals.js', '/js/pay.js', '/js/install.js', '/js/tour.js', '/js/bcv.js', '/js/progress.js', '/js/exguide.js', '/js/reminders.js', '/js/vendor/qrcode.js',
   ...VIEWS.map((v) => `/js/views/${v}.js`),
   '/assets/logo.svg', '/assets/icon-192.png', '/assets/icon-512.png', '/assets/favicon.png', '/assets/apple-touch-icon.png',
   SDK + 'firebase-app.js', SDK + 'firebase-auth.js', SDK + 'firebase-firestore.js'
