@@ -3,6 +3,7 @@ import { auth, db, doc, getDoc, writeBatch } from './firebase.js';
 import { store, memberStatus, daysBetween, LIVE_STATUS } from './store.js';
 import { round2, round4, nowISO, todayKey, dayKey, addDays, fromKey, loc, usd, fmtDate, shortId } from './utils.js';
 import { planEnd, evalCalc, exercise } from './gym.js';
+import { dietSummary, planEndKey } from './nutrition.js';
 
 export const APP_URL = 'https://sano-entrenador.web.app';
 export const by = () => (auth.currentUser?.isAnonymous ? 'demo' : (auth.currentUser?.email || '').split('@')[0] || '—');
@@ -537,6 +538,46 @@ export async function saveRoutine(data, id = null, member = null) {
   return { id: ref.id, ...docData };
 }
 export async function deleteRoutine(r) { await store.remove('routines', r.id); }
+
+// ======================================================================
+// PLANES DE ALIMENTACIÓN (semanal = 7 días · mensual = 28 días). El del alumno se publica en su carnet.
+// ======================================================================
+const cleanItem = (it) => (it.f ? { f: String(it.f), q: Math.round((Number(it.q) || 0) * 100) / 100 } : { n: String(it.n || '').trim().slice(0, 80), q: String(it.q || '').trim().slice(0, 30), k: Math.round(Number(it.k) || 0) });
+export function cleanDiet(d) {
+  return {
+    name: String(d.name || '').trim() || 'Plan de alimentación', goal: String(d.goal || ''), type: d.type || 'todo',
+    kcal: Math.round(Number(String(d.kcal ?? '').replace(',', '.')) || 0) || null, meals: Number(d.meals) || (d.days?.[0]?.meals || []).length || 5,
+    period: d.period === 'mensual' ? 'mensual' : 'semanal', water: Number(d.water) || null, note: String(d.note || '').trim(),
+    params: d.params || null,
+    days: (d.days || []).map((x) => ({ meals: (x.meals || []).map((m) => ({ slot: m.slot || '', name: String(m.name || '').trim(), time: String(m.time || ''), title: String(m.title || '').trim(), items: (m.items || []).map(cleanItem).filter((i) => (i.f ? i.q > 0 : i.n)) })) }))
+  };
+}
+export async function saveDiet(data, id = null, member = null) {
+  const d = cleanDiet(data);
+  if (!d.days.length || !d.days.some((x) => x.meals.some((m) => m.items.length))) throw new Error('Agrega al menos una comida con alimentos.');
+  if (member) {
+    d.start = data.start || todayKey();
+    d.end = planEndKey(d.start, d.period);
+  }
+  const b = store.batch();
+  const ref = id ? store.ref('diets', id) : store.newRef('diets');
+  const docData = { ...d, template: !member, memberId: member?.id || null, memberName: member?.name || '', trainer: store.coachName, active: true, updatedAt: nowISO(), ...(id ? {} : { createdAt: nowISO(), by: by() }) };
+  b.set(ref, docData, { merge: true });
+  if (member) {
+    b.set(store.ref('members', member.id), { dietId: ref.id, dietName: d.name, dietStart: d.start, dietEnd: d.end, dietPeriod: d.period, updatedAt: nowISO() }, { merge: true });
+    putCard(b, member, { diet: dietSummary(docData) });
+  }
+  await store.commit(b);
+  return { id: ref.id, ...docData };
+}
+/** Quita el plan del carnet del alumno (el historial se conserva) */
+export async function removeMemberDiet(member) {
+  const b = store.batch();
+  b.set(store.ref('members', member.id), { dietId: null, dietName: '', dietStart: null, dietEnd: null, dietPeriod: null, updatedAt: nowISO() }, { merge: true });
+  putCard(b, member, { diet: null });
+  await store.commit(b);
+}
+export async function deleteDiet(d) { await store.remove('diets', d.id); }
 export const exLine = (id, sets = 3, reps = '12', rest = 60) => { const e = exercise(id); return { exId: id, name: e?.name || id, sets, reps, rest, weight: '', note: '' }; };
 
 // ======================================================================

@@ -15,8 +15,9 @@ PWA instalable (PC, tablet, Android, iPhone) y mundial: el país se elige la pri
 | Alumnos | Ficha con objetivo, meta de peso, salud y lesiones; pestañas de progreso, rutina, sesiones, plan, bitácora y salud. |
 | Planes y cobros | Paquetes de sesiones, mensualidades, asesoría online, parejas; abonos, deudas, recibos imprimibles o por WhatsApp. |
 | Rutinas y ejercicios | Más de 120 ejercicios (gimnasio y casa) con guía paso a paso, músculos trabajados en un mapa corporal, consejos y errores comunes. Generador de rutinas a la medida (objetivo, nivel, días, lugar, minutos). |
+| Alimentación | Más de 80 alimentos (incluye comida criolla) con calorías y macros, más de 70 comidas armadas y 10 planes listos (bajar de peso, definición, masa muscular, vegetariano, criollo económico, bajo en carbohidratos). Generador a la medida con las calorías del alumno; planes semanales (7 días) o mensuales (4 semanas), editor por día y comida, lista de compras e impresión. |
 | Evaluaciones | Peso, % grasa, masa muscular, perímetros; IMC, masa magra, metabolismo basal; antes y ahora. |
-| Carnet del alumno | `/alumno/CÓDIGO`: QR, plan, próximas sesiones, **modo entrenamiento** (series, cargas, descanso con temporizador, esfuerzo) y **mi progreso** (curva de peso, medidas, meta, logros). El alumno puede registrar su peso. |
+| Carnet del alumno | `/alumno/CÓDIGO`: QR, plan, próximas sesiones, **modo entrenamiento** (series, cargas, descanso con temporizador, esfuerzo) y **comidas** (menú del día, comidas cumplidas, lista de compras) y **mi progreso** (curva de peso, medidas, meta, logros). El alumno puede registrar su peso. |
 | Página pública | `/coach/tu-nombre`: tu presentación, planes y botón de WhatsApp para captar alumnos. |
 | Recordatorios | Lista diaria por WhatsApp: confirmar sesiones, planes por vencer, pocas sesiones, pagos, cumpleaños, ausencias, evaluaciones. |
 | Reportes | Ingresos, asistencia, retención y planes (con PIN). |
@@ -33,7 +34,7 @@ PWA instalable (PC, tablet, Android, iPhone) y mundial: el país se elige la pri
 ```sh
 cd scripts && npm install
 firebase emulators:start --only auth,firestore,hosting   # en otra terminal
-sh test-emu.sh            # E2E (30 comprobaciones)
+sh test-emu.sh            # E2E (37 comprobaciones)
 node smoke.mjs http://127.0.0.1:5151 390   # todas las pantallas en teléfono
 node prod-smoke.mjs       # producción
 node pwa-check.mjs https://sano-entrenador.web.app

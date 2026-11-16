@@ -100,6 +100,7 @@ export function msgVars(member = {}, { session = null, extra = {} } = {}) {
     monto: (Number(member.balance) || 0) > 0.009 ? usd(member.balance) : '',
     enlace: cardLink(member),
     rutina: member.routineName || '',
+    alimentacion: member.dietName || '',
     resultados: '',
     ...extra
   };

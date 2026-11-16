@@ -8,6 +8,7 @@ import { icon } from '../icons.js';
 import { qrDataURL } from '../shared.js';
 import { SESSION_TYPES } from '../gym.js';
 import { exerciseSheet, nextLoad, guide, bodyMapHTML } from '../exguide.js';
+import { dayIndexFor, dayLabel, dayNut, sumNut, qtyText, itemName, shoppingList, dietStatus, macroPct, DIET_TIPS } from '../nutrition.js';
 import { progressSummaryHTML, bindProgress, weightSeries, goalInfo, goalBarHTML, achievements, badgesHTML, PROG_MEASURES } from '../progress.js';
 
 const LAST = 'se_last_card';
@@ -79,8 +80,9 @@ export async function mount(root) {
   const first = (c.name || '').split(' ')[0];
   const qrP = qrDataURL(location.origin + '/alumno/' + code, 6);
   const coachWa = (text) => (c.coachPhone ? waLink(c.coachPhone, text) : '');
-  const tabs = { inicio: ['home', 'Inicio'], entrenar: ['dumbbell', 'Entrenar'], progreso: ['trend', 'Progreso'], historial: ['history', 'Historial'] };
+  const tabs = { inicio: ['home', 'Inicio'], entrenar: ['dumbbell', 'Entrenar'], comidas: ['utensils', 'Comidas'], progreso: ['trend', 'Progreso'], historial: ['history', 'Historial'] };
   let tab = new URLSearchParams(location.search).get('tab'); if (!tabs[tab]) tab = 'inicio';
+  let dsel = null;
   const WK = `se_wk_${code}`;
 
   const weighins = () => { const by = {}; logs.filter((l) => l.kind === 'peso' && l.weight).forEach((l) => { const d = dk(l); if (!by[d] || by[d].at < l.at) by[d] = { ...l, day: d }; }); return Object.values(by); };
@@ -130,9 +132,58 @@ export async function mount(root) {
           : `<p class="pt-muted">No tienes sesiones agendadas.${coachWa('') ? ` <a href="${coachWa(`Hola ${c.coach || ''}, soy ${c.name}. Quiero agendar mi próxima sesión.`)}" target="_blank" rel="noopener">Pedir una sesión</a>` : ''}</p>`}
       </section>
       ${c.routine ? `<button class="pt-cta" data-go="entrenar">${icon('dumbbell')}<span><b>Entrenar ahora</b><small>${esc(c.routine.name)} · ${(c.routine.days || []).length} día(s)</small></span>${icon('arrowRight')}</button>` : ''}
+      ${dietCta()}
       ${ach.length ? `<section class="pt-card"><div class="pt-ct between">${icon('medal')} Mis logros <button class="pt-more" data-go="progreso">Ver todo</button></div>${badgesHTML(ach, { limit: 4 })}</section>` : ''}
       <section class="pt-card pt-coach"><div class="pt-coach-av">${icon('user')}</div><div class="grow"><span class="pt-k">Mi entrenador</span><b>${esc(c.coach || c.brand || 'Entrenador')}</b>${c.specialty ? `<small>${esc(c.specialty)}</small>` : ''}</div>
         <div class="pt-coach-a">${coachWa('') ? `<a class="btn btn-whatsapp btn-sm" href="${coachWa(`Hola ${c.coach || ''}, soy ${c.name}.`)}" target="_blank" rel="noopener">${icon('whatsapp')} Escribir</a>` : ''}${c.coachIg ? `<a class="btn btn-secondary btn-sm" href="https://instagram.com/${esc(String(c.coachIg).replace(/^@/, ''))}" target="_blank" rel="noopener">@${esc(String(c.coachIg).replace(/^@/, ''))}</a>` : ''}</div></section>`;
+  }
+
+  // ---------- Comidas (plan de alimentación) ----------
+  const D = c.diet && (c.diet.days || []).length ? c.diet : null;
+  const DM = `se_dm_${code}`;
+  const n0 = (v) => Math.round(Number(v) || 0).toLocaleString('es-VE');
+  function dietCta() {
+    if (!D) return '';
+    const i = dayIndexFor(D, todayKey()); const st = dietStatus(D, todayKey());
+    if (st?.k === 'ven') return '';
+    const done = (ls.get(DM, {})[todayKey()] || []).length; const tot = (D.days[i].meals || []).length;
+    return `<button class="pt-cta pt-cta-food" data-go="comidas">${icon('utensils')}<span><b>Mi menú de hoy</b><small>${done ? `${done} de ${tot} comidas cumplidas` : `${tot} comidas · ${n0(dayNut(D.days[i]).kcal)} kcal`}</small></span>${icon('arrowRight')}</button>`;
+  }
+  function comidasHTML() {
+    if (!D) return `<section class="pt-card pt-empty">${icon('utensils')}<b>Aún no tienes plan de alimentación</b><p class="pt-muted">Cuando tu entrenador te lo asigne, aquí verás el menú de cada día con sus porciones y la lista de compras.</p>${coachWa('') ? `<a class="btn btn-whatsapp" href="${coachWa(`Hola ${c.coach || ''}, soy ${c.name}. Me gustaría tener un plan de alimentación.`)}" target="_blank" rel="noopener">${icon('whatsapp')} Pedírselo</a>` : ''}</section>`;
+    const t = todayKey(); const ti = dayIndexFor(D, t);
+    if (dsel == null) dsel = ti;
+    const st = dietStatus(D, t); const w = Math.floor(dsel / 7);
+    const day = D.days[dsel]; const tot = dayNut(day); const pc = macroPct(tot);
+    const isToday = dsel === ti && st?.k !== 'ven' && st?.k !== 'pen';
+    const done = isToday ? ls.get(DM, {})[t] || [] : [];
+    const weeks = Math.ceil(D.days.length / 7);
+    return `
+      <section class="pt-card pt-diet-h"><span class="pt-k">${D.period === 'mensual' ? 'Plan mensual' : 'Plan semanal'}${D.start ? ` · ${fmtDate(D.start)} – ${fmtDate(D.end)}` : ''}</span><b>${esc(D.name)}</b>
+        <div class="pt-diet-tags">${D.kcal ? `<span class="pt-chip">${icon('flame')} ${n0(D.kcal)} kcal/día</span>` : ''}${D.water ? `<span class="pt-chip">${icon('droplet')} ${String(D.water).replace('.', ',')} L de agua</span>` : ''}${st ? `<span class="pt-chip st-${st.k}">${esc(st.label)}</span>` : ''}</div></section>
+      ${weeks > 1 ? `<div class="pt-weeks">${Array.from({ length: weeks }, (_, i) => `<button class="${i === w ? 'on' : ''}" data-dw="${i}">Semana ${i + 1}</button>`).join('')}</div>` : ''}
+      <div class="pt-days">${D.days.slice(w * 7, w * 7 + 7).map((_, j) => { const i = w * 7 + j; const lab = dayLabel(D, i, { short: true }).split(' '); return `<button class="${i === dsel ? 'on' : ''} ${i === ti ? 'today' : ''}" data-dd="${i}"><small>${esc(lab[0])}</small><b>${esc(lab[1] || String(i + 1))}</b></button>`; }).join('')}</div>
+      <section class="pt-card pt-dtot"><div class="between"><span class="pt-k">${isToday ? 'Hoy' : esc(dayLabel(D, dsel))}</span><b>${n0(tot.kcal)} kcal</b></div>
+        <div class="pt-mbar"><span class="mp" style="width:${pc.p}%"></span><span class="mc" style="width:${pc.c}%"></span><span class="mf" style="width:${pc.f}%"></span></div>
+        <div class="pt-mleg"><span><i class="mp"></i>Proteína ${tot.p} g</span><span><i class="mc"></i>Carbos ${tot.c} g</span><span><i class="mf"></i>Grasas ${tot.f} g</span></div>
+        ${isToday ? `<div class="pt-dprog"><div class="pt-rest-bar"><i style="width:${Math.round((done.length / Math.max(1, day.meals.length)) * 100)}%"></i></div><small>${done.length} de ${day.meals.length} comidas cumplidas hoy</small></div>` : ''}</section>
+      ${day.meals.map((m, mi) => { const k = sumNut(m.items).kcal; const ok = done.includes(mi); return `<section class="pt-card pt-meal ${ok ? 'ok' : ''}">
+        <div class="pt-meal-h"><div class="grow"><span class="pt-k">${esc(m.name)}${m.time ? ` · ${esc(m.time)}` : ''}</span><b>${esc(m.title || m.name)}</b></div><span class="pt-meal-k">${n0(k)}<small>kcal</small></span></div>
+        <ul class="pt-meal-i">${(m.items || []).map((it) => `<li><span>${esc(itemName(it))}</span><b>${esc(qtyText(it))}</b></li>`).join('')}</ul>
+        ${isToday ? `<button class="pt-meal-ck ${ok ? 'on' : ''}" data-mk="${mi}">${icon(ok ? 'checkCircle' : 'check')} ${ok ? '¡Cumplida!' : 'Marcar como cumplida'}</button>` : ''}</section>`; }).join('')}
+      <details class="pt-card pt-shop"><summary>${icon('cart')} Lista de compras · semana ${w + 1}</summary>${shoppingList(D, w).map((g) => `<div class="pt-shop-g"><span class="pt-k">${esc(g.group)}</span><ul>${g.items.map((x) => `<li><span>${esc(x.name)}</span><b>${esc(x.qty)}</b></li>`).join('')}</ul></div>`).join('')}</details>
+      <section class="pt-card pt-tips"><div class="pt-ct">${icon('info')} Recomendaciones</div>${D.note ? `<p>${esc(D.note)}</p>` : ''}<ul>${DIET_TIPS.slice(0, 3).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+        ${coachWa('') ? `<a class="btn btn-secondary btn-sm" href="${coachWa(`Hola ${c.coach || ''}, soy ${c.name}. Tengo una duda con mi plan de alimentación.`)}" target="_blank" rel="noopener">${icon('whatsapp')} Consultar a mi entrenador</a>` : ''}</section>`;
+  }
+  function bindDiet() {
+    root.querySelectorAll('[data-dw]').forEach((b) => b.onclick = () => { dsel = Number(b.dataset.dw) * 7; draw(); });
+    root.querySelectorAll('[data-dd]').forEach((b) => b.onclick = () => { dsel = Number(b.dataset.dd); draw(); });
+    root.querySelectorAll('[data-mk]').forEach((b) => b.onclick = () => {
+      const all = ls.get(DM, {}); const t = todayKey(); const cur = new Set(all[t] || []); const i = Number(b.dataset.mk);
+      if (cur.has(i)) cur.delete(i); else { cur.add(i); if (cur.size === D.days[dsel].meals.length) toast('¡Cumpliste todas tus comidas de hoy! 🥗'); }
+      for (const k of Object.keys(all)) if (k < t) delete all[k];
+      all[t] = [...cur]; ls.set(DM, all); draw();
+    });
   }
 
   // ---------- Entrenar ----------
@@ -194,7 +245,7 @@ export async function mount(root) {
   let tick = null; let restT = null;
   function draw() {
     clearInterval(tick);
-    const body = tab === 'entrenar' ? entrenarHTML() : tab === 'progreso' ? progresoHTML() : tab === 'historial' ? historialHTML() : inicioHTML();
+    const body = tab === 'entrenar' ? entrenarHTML() : tab === 'comidas' ? comidasHTML() : tab === 'progreso' ? progresoHTML() : tab === 'historial' ? historialHTML() : inicioHTML();
     root.innerHTML = `<div class="pt-page">
       <header class="pt-top"><img src="/assets/logo.svg" alt="" width="34" height="34"><div class="grow"><b>${esc(c.brand || c.coach || 'SanoEntrenador')}</b><small>${esc(tabs[tab][1] === 'Inicio' ? 'Mi carnet' : tabs[tab][1])}</small></div><span class="pt-avatar">${esc((first[0] || 'A').toUpperCase())}</span></header>
       <main class="pt-main" data-tab="${tab}">${body}</main>
@@ -212,6 +263,7 @@ export async function mount(root) {
     });
     if (tab === 'progreso') { bindProgress(root); root.querySelector('[data-weigh]').onclick = weighModal; }
     if (tab === 'entrenar') bindTrain();
+    if (tab === 'comidas') bindDiet();
   }
 
   function weighModal() {

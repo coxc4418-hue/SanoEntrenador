@@ -12,7 +12,7 @@ const W = Number(process.argv[3] || 390);
 const OUT = process.argv[4] || path.join(here, 'shots', 'smoke-' + W);
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const VIEWS = ['inicio', 'agenda', 'asistencia', 'alumnos', 'rutinas', 'avisos', 'cobros', 'reportes', 'ajustes'];
+const VIEWS = ['inicio', 'agenda', 'asistencia', 'alumnos', 'rutinas', 'alimentacion', 'avisos', 'cobros', 'reportes', 'ajustes'];
 let fails = 0; const errs = [];
 
 const measure = (W) => ({
@@ -72,11 +72,26 @@ await check('ficha-sentadilla'); await closeModals();
 await page.evaluate(() => document.querySelector('#rt-gen').click()); await sleep(700);
 await page.evaluate(() => document.querySelector('[data-n="place"][data-v="casa"]').click()); await sleep(300);
 await check('generador'); await closeModals();
+// Alimentación: plantillas, alimentos, asignados, ficha de plan, generador y editor
+await nav('alimentacion');
+await page.evaluate(() => document.querySelector('#nt-b [data-i="0"]').click()); await sleep(700);
+await check('alim-plantilla'); await closeModals();
+await page.evaluate(() => document.querySelector('#nt-tabs [data-t="alimentos"]').click()); await sleep(600);
+await check('alim-alimentos');
+await page.evaluate(() => document.querySelector('#nt-tabs [data-t="asignados"]').click()); await sleep(600);
+await check('alim-asignados', false);
+await page.evaluate(() => document.querySelector('#nt-gen').click()); await sleep(700);
+await page.evaluate(() => document.querySelector('[data-n="period"][data-v="mensual"]').click()); await sleep(400);
+await check('alim-generador');
+await page.evaluate(() => [...document.querySelectorAll('.modal [data-ok]')].pop().click()); await sleep(900);
+await check('alim-editor');
+await page.evaluate(() => document.querySelector('.modal [data-iadd="0"]').click()); await sleep(600);
+await check('alim-buscar-alimento', false); await closeModals();
 // Ficha del alumno: todas las pestañas
 const mid = await page.evaluate(async () => { const { store } = await import('/js/store.js'); const m = store.members.find((x) => (x.evalHist || []).length > 2) || store.members[0]; return m.id; });
 await page.evaluate(async (id) => (await import('/js/member.js')).openMember(id), mid); await sleep(1500);
-for (const t of ['resumen', 'progreso', 'rutina', 'sesiones', 'plan', 'bitacora', 'salud']) {
-  await page.evaluate((t) => document.querySelector(`.modal [data-tab="${t}"], .modal [data-t="${t}"]`)?.click(), t); await sleep(700); await check('alumno-' + t, ['resumen', 'progreso', 'rutina'].includes(t));
+for (const t of ['resumen', 'progreso', 'rutina', 'alimentacion', 'sesiones', 'plan', 'bitacora', 'salud']) {
+  await page.evaluate((t) => document.querySelector(`.modal [data-tab="${t}"], .modal [data-t="${t}"]`)?.click(), t); await sleep(700); await check('alumno-' + t, ['resumen', 'progreso', 'rutina', 'alimentacion'].includes(t));
 }
 await closeModals();
 // Portal del alumno
@@ -88,7 +103,7 @@ portal.on('console', (m) => { if (m.type() === 'error' && !/favicon|net::|Failed
 const pcheck = async (label) => { const m = await portal.evaluate(measure, W); const bad = m.sw > W + 1 || m.over.length; if (bad) { fails++; console.log(`✗ ${label}`, m.over); } else console.log(`✓ ${label}`); await portal.screenshot({ path: path.join(OUT, `${label}.png`), fullPage: true }); };
 await portal.goto(`${BASE}/alumno/${code}?emu=1`, { waitUntil: 'networkidle2' }); await sleep(2500);
 await pcheck('portal-inicio');
-for (const t of ['progreso', 'historial', 'entrenar']) { await portal.evaluate((t) => document.querySelector(`.pt-nav [data-t="${t}"]`).click(), t); await sleep(900); await pcheck('portal-' + t); }
+for (const t of ['comidas', 'progreso', 'historial', 'entrenar']) { await portal.evaluate((t) => document.querySelector(`.pt-nav [data-t="${t}"]`).click(), t); await sleep(900); await pcheck('portal-' + t); }
 await portal.evaluate(() => document.querySelector('[data-start]')?.click()); await sleep(800);
 await portal.evaluate(() => document.querySelector('[data-set="0-0"]')?.click()); await sleep(900);
 await pcheck('portal-entrenando');

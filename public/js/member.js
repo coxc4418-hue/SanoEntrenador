@@ -205,7 +205,7 @@ export function heatmapHTML(days, weeks = 14) {
 // ======================================================================
 // FICHA DEL ALUMNO
 // ======================================================================
-const TABS = { resumen: 'Resumen', progreso: 'Progreso', rutina: 'Rutina', sesiones: 'Sesiones', plan: 'Plan y pagos', bitacora: 'Bitácora', salud: 'Salud' };
+const TABS = { resumen: 'Resumen', progreso: 'Progreso', rutina: 'Rutina', alimentacion: 'Alimentación', sesiones: 'Sesiones', plan: 'Plan y pagos', bitacora: 'Bitácora', salud: 'Salud' };
 const LOG_KIND = { entreno: ['dumbbell', 'Entrenó'], peso: ['scale', 'Se pesó'], nota: ['edit', 'Nota'] };
 
 export async function openMember(id, { tab = 'resumen' } = {}) {
@@ -384,6 +384,27 @@ export async function openMember(id, { tab = 'resumen' } = {}) {
       body.querySelector('[data-r="edit"]')?.addEventListener('click', async () => { if (await routineEditor(cur, { member: mb })) done(); });
       body.querySelector('[data-r="print"]')?.addEventListener('click', () => printRoutine(cur, mb));
       body.querySelector('[data-r="wa"]')?.addEventListener('click', () => composeWa({ ...mb, routineName: cur.name }, 'rutina'));
+    },
+
+    async alimentacion(body) {
+      const list = await load('diets', () => store.memberDiets(mb.id));
+      const D = await import('./diet.js'); const { removeMemberDiet } = await import('./ops.js');
+      const cur = list.find((r) => r.id === mb.dietId) || null;
+      body.innerHTML = `<div class="between mb row-wrap"><div><b>${cur ? esc(cur.name) : 'Sin plan de alimentación'}</b>${cur ? `<div class="t-sub">${D.dietBadge(mb)}</div>` : ''}</div><div class="row row-wrap">
+        <button class="btn btn-secondary btn-sm" data-r="tpl">${icon('layers')} Desde plantilla</button><button class="btn btn-${cur ? 'secondary' : 'primary'} btn-sm" data-r="gen">${icon('sparkle')} A su medida</button>
+        ${cur ? `<button class="btn btn-secondary btn-sm" data-r="edit">${icon('edit')} Editar</button><button class="btn btn-secondary btn-icon btn-sm" data-r="print" aria-label="Imprimir">${icon('print')}</button><button class="btn btn-whatsapp btn-sm" data-r="wa">${icon('whatsapp')} Avisar</button>` : ''}</div></div>
+        <div data-dv>${cur ? '' : emptyState('utensils', 'Sin plan', 'Asígnale un plan semanal o mensual según su objetivo. Lo ve en su carnet, en «Comidas», con el menú de cada día y la lista de compras.')}</div>
+        ${cur ? '<button class="btn btn-ghost btn-sm mt text-danger" data-r="off">Quitar del carnet</button>' : ''}
+        ${list.filter((r) => r.id !== cur?.id).length ? `<div class="section-title mt-lg">Planes anteriores</div><div class="list">${list.filter((r) => r.id !== cur?.id).map((r) => `<div class="list-item"><div class="grow"><b>${esc(r.name)}</b><div class="t-sub">${r.start ? `${fmtDate(r.start)} → ${fmtDate(r.end)}` : fmtDate(r.createdAt)} · ${r.period === 'mensual' ? 'mensual' : 'semanal'}</div></div><button class="btn btn-ghost btn-sm" data-again="${r.id}">${icon('refresh')} Volver a usar</button></div>`).join('')}</div>` : ''}`;
+      if (cur) D.mountDietView(body.querySelector('[data-dv]'), cur);
+      const done = () => { cache.diets = null; mb = store.member(mb.id) || mb; draw(); };
+      body.querySelector('[data-r="tpl"]').onclick = async () => { if (await D.assignDietTemplate(mb)) done(); };
+      body.querySelector('[data-r="gen"]').onclick = async () => { const g = await D.dietGenerator(mb); if (g && await D.dietEditor(g, { member: mb, fresh: true })) done(); };
+      body.querySelector('[data-r="edit"]')?.addEventListener('click', async () => { if (await D.dietEditor(cur, { member: mb })) done(); });
+      body.querySelector('[data-r="print"]')?.addEventListener('click', () => D.printDiet(cur, mb));
+      body.querySelector('[data-r="wa"]')?.addEventListener('click', () => composeWa({ ...mb, dietName: cur.name }, 'alimentacion'));
+      body.querySelector('[data-r="off"]')?.addEventListener('click', async () => { if (!(await confirmDialog({ title: 'Quitar plan', message: 'El plan deja de verse en su carnet. Queda guardado en «Planes anteriores».', confirmText: 'Quitar' }))) return; await removeMemberDiet(mb); done(); });
+      body.querySelectorAll('[data-again]').forEach((b) => b.onclick = async () => { const r = list.find((x) => x.id === b.dataset.again); const c = JSON.parse(JSON.stringify(r)); delete c.id; delete c.start; if (await D.dietEditor(c, { member: mb, fresh: true })) done(); });
     },
 
     async sesiones(body) {

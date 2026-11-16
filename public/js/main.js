@@ -8,7 +8,7 @@ import { rateChip, startBcv } from './bcv.js';
 import { openCountryPicker, salesWa, SALES_PHONE_FMT } from './shared.js';
 import { isStandalone, platform, bindInstallButtons } from './install.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 const ROUTES = {
   inicio: { title: 'Inicio', icon: 'home', group: 'Entrenamiento', load: () => import('./views/dashboard.js') },
@@ -16,6 +16,7 @@ const ROUTES = {
   asistencia: { title: 'Asistencia con QR', icon: 'qr', group: 'Entrenamiento', load: () => import('./views/checkin.js') },
   alumnos: { title: 'Alumnos', icon: 'users', group: 'Entrenamiento', load: () => import('./views/members.js') },
   rutinas: { title: 'Rutinas y ejercicios', icon: 'dumbbell', group: 'Entrenamiento', load: () => import('./views/routines.js') },
+  alimentacion: { title: 'Alimentación', icon: 'utensils', group: 'Entrenamiento', load: () => import('./views/nutrition.js') },
   avisos: { title: 'Recordatorios', icon: 'bell', group: 'Entrenamiento', load: () => import('./views/reminders.js') },
   cobros: { title: 'Cobros y recibos', icon: 'wallet', group: 'Negocio', load: () => import('./views/payments.js') },
   reportes: { title: 'Reportes', icon: 'chart', group: 'Negocio', pin: true, load: () => import('./views/reports.js') },

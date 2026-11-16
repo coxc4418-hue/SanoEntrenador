@@ -255,7 +255,7 @@ export function mount(el, { params = {} }) {
         setBusy(btn, true, 'Preparando…');
         try {
           const { getDocs } = await import('../firebase.js');
-          const names = ['memberships', 'sessions', 'checkins', 'routines', 'evaluations', 'sales', 'reminders'];
+          const names = ['memberships', 'sessions', 'checkins', 'routines', 'diets', 'evaluations', 'sales', 'reminders'];
           const all = async (n) => (await getDocs(store.col(n))).docs.map((d) => ({ id: d.id, ...d.data() }));
           const got = await Promise.all(names.map(all));
           const data = { app: 'SanoEntrenador', exportedAt: nowISO(), business: store.businessName, settings: store.settings, members: store.members };

@@ -106,8 +106,19 @@ try {
   ok('El carnet trae el avance (−1,6 kg)', await until(p, async ({ fb }, c) => { const h = (await fb.getDoc(fb.doc(fb.db, 'cards', c))).data()?.evals || []; return h.length === 2 && Math.abs(h[1].weight - h[0].weight + 1.6) < 0.01; }, m.cardCode));
 
   // ==================================================================
+  console.log('5b) Plan de alimentación');
+  const dt = await run(p, async ({ ops, store }, id) => { const n = await import('/js/nutrition.js'); const g = n.generateDiet({ goal: 'Bajar de peso', kcal: 1600, type: 'criollo', meals: 4, period: 'mensual' }); const r = await ops.saveDiet(g, null, store.member(id)); return { days: r.days.length, start: r.start, end: r.end }; }, m.id);
+  ok('Plan mensual de 28 días asignado', dt.days === 28 && !!dt.end, JSON.stringify(dt));
+  ok('El plan llega al carnet', await until(p, async ({ fb }, c) => (await fb.getDoc(fb.doc(fb.db, 'cards', c))).data()?.diet?.days?.length === 28, m.cardCode));
+  ok('La ficha del alumno marca su plan', await until(p, ({ store }, id) => !!store.member(id)?.dietId, m.id));
+  await run(p, async ({ ops }) => { const n = await import('/js/nutrition.js'); const t = n.dietTemplates()[0]; await ops.saveDiet({ ...t, name: 'Mi plantilla E2E' }); });
+  ok('Guarda plantillas de alimentación propias', await until(p, ({ store }) => store.dietTemplates.some((x) => x.name === 'Mi plantilla E2E')));
+  const wk = await run(p, async ({ ops, store }) => { const n = await import('/js/nutrition.js'); const sel = store.activePlans.length; void sel; const g = n.generateDiet({ goal: 'Ganar masa muscular', kcal: 2800 }); return g.days.length; });
+  ok('Plan semanal de 7 días', wk === 7);
+
+  // ==================================================================
   console.log('6) Vistas del entrenador');
-  for (const v of ['inicio', 'agenda', 'asistencia', 'alumnos', 'rutinas', 'avisos', 'cobros', 'reportes', 'ajustes']) {
+  for (const v of ['inicio', 'agenda', 'asistencia', 'alumnos', 'rutinas', 'alimentacion', 'avisos', 'cobros', 'reportes', 'ajustes']) {
     await p.evaluate((v) => { import('/js/main.js').then((x) => x.navigate(v)); }, v); await sleep(1300);
     if (await p.$('.modal [data-pin]')) { await p.type('.modal [data-pin]', T.pin); await p.evaluate(() => document.querySelector('.modal [data-ok]').click()); await sleep(900); }
   }
@@ -149,6 +160,12 @@ try {
   ok('Registra su peso', /68,4/.test(await text(pub.p)));
   ok('El entrenador ve lo que registró el alumno', await until(p, async ({ fb }, c) => (await fb.getDocs(fb.collection(fb.db, 'cards', c, 'logs'))).size >= 2, m.cardCode));
   const bad = await pub.p.evaluate(async (c) => { const f = await import('/js/firebase.js'); try { await f.setDoc(f.doc(f.db, 'cards', c), { name: 'hack' }, { merge: true }); return false; } catch (_) { return true; } }, m.cardCode);
+  await pub.p.evaluate(() => document.querySelector('.pt-nav [data-t="comidas"]').click()); await sleep(900);
+  const ct = await text(pub.p);
+  ok('El alumno ve su menú del día en «Comidas»', /plan mensual/i.test(ct) && /kcal/.test(ct) && /Lista de compras/.test(ct));
+  await pub.p.evaluate(() => document.querySelector('[data-mk="0"]')?.click()); await sleep(500);
+  ok('Marca una comida como cumplida', /1 de 4 comidas cumplidas/.test(await text(pub.p)));
+  await pub.p.screenshot({ path: path.join(OUT, 'e2e-04b-portal-comidas.png'), fullPage: true });
   ok('Un extraño no puede modificar el carnet', bad);
   await pub.ctx.close();
 

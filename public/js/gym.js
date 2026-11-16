@@ -35,7 +35,8 @@ export const DEFAULT_MSGS = {
   inactivo: { label: 'No ha venido', text: 'Hola {nombre}, hace {dias} días que no entrenamos juntos 😅. ¿Todo bien?\n\nSi necesitas, ajustamos horario o rutina. ¡Te espero! 💪' },
   deuda: { label: 'Recordar pago', text: 'Hola {nombre} 👋, te recuerdo que tienes un saldo pendiente de *{monto}* de tu plan *{plan}*.\n\nPuedes pagarme por transferencia o en la próxima sesión. ¡Gracias!' },
   cumple: { label: 'Cumpleaños', text: '🎉 ¡Feliz cumpleaños, {nombre}! 🎂\n\nQue este año venga con mucha salud, energía y nuevas marcas personales. ¡A celebrarlo con un buen entreno! 💪\n— {entrenador}' },
-  rutina: { label: 'Rutina nueva', text: 'Hola {nombre} 📋, tu rutina *{rutina}* ya está lista.\n\nÁbrela en tu carnet, toca «Entrenar» y marca cada serie: ahí tienes el cronómetro de descanso y el video de cada ejercicio.\n{enlace}\n\n¡A darle! 🔥' },
+  rutina: { label: 'Rutina nueva', text: 'Hola {nombre} 📋, tu rutina *{rutina}* ya está lista.\n\nÁbrela en tu carnet, toca «Entrenar» y marca cada serie: ahí tienes el cronómetro de descanso y cómo se hace cada ejercicio.\n{enlace}\n\n¡A darle! 🔥' },
+  alimentacion: { label: 'Plan de alimentación', text: 'Hola {nombre} 🥗, tu plan de alimentación *{alimentacion}* ya está listo.\n\nÁbrelo en tu carnet, en la pestaña «Comidas»: ahí ves el menú de cada día con sus porciones y la lista de compras de la semana.\n{enlace}\n\n¡Vamos con todo! 💪' },
   reevaluar: { label: 'Toca evaluación', text: 'Hola {nombre} 📏, ya toca tu evaluación para medir tus avances (peso, medidas y % de grasa).\n\n¿Qué día te queda bien esta semana?' },
   progreso: { label: 'Resultados de evaluación', text: 'Hola {nombre} 📊, estos son tus resultados:\n\n{resultados}\n\nMira tus gráficas, medidas y logros en tu carnet: {enlace}\n\n¡Sigue así! 💪' },
   libre: { label: 'Mensaje libre', text: 'Hola {nombre} 👋, ' }
