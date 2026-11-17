@@ -155,6 +155,22 @@ try {
   ok('La página muestra lo que incluye cada plan', /Plan de nutrición/.test(ctext) && /Plan alimenticio/.test(ctext));
   await pub.p.screenshot({ path: path.join(OUT, 'e2e-03-coach.png'), fullPage: true });
 
+  // Alumno con el plan vencido (para el carnet suspendido)
+  const exp = await run(p, async ({ ops, store, utils, fb }) => {
+    await store.saveSettings({ whatsapp: '04141112233' });
+    const m2 = await ops.saveMember({ name: 'Pedro Vencido', phone: '04149990000', idDoc: 'V-30.999.000', goal: 'Ganar masa muscular', sex: 'M' });
+    const plan = store.activePlans.find((x) => x.kind === 'tiempo');
+    await ops.sellMembership({ member: store.member(m2.id) || m2, plan, start: utils.todayKey(), payments: [{ method: 'efectivo', amount: 1e9 }] });
+    for (let i = 0; i < 40 && !store.member(m2.id)?.membership; i++) await new Promise((r) => setTimeout(r, 250));
+    const d = (n) => utils.dayKey(utils.addDays(new Date(), n));
+    const ms = { ...store.member(m2.id).membership, start: d(-35), end: d(-5) };
+    await fb.setDoc(store.ref('members', m2.id), { membership: ms }, { merge: true });
+    for (let i = 0; i < 40 && store.member(m2.id)?.membership?.end !== ms.end; i++) await new Promise((r) => setTimeout(r, 250));
+    await ops.refreshCards([store.member(m2.id)]);
+    return { code: store.member(m2.id).cardCode, end: ms.end };
+  });
+  ok('Alumno de prueba con el plan vencido', !!exp.code, JSON.stringify(exp));
+
   // ==================================================================
   console.log('8) Portal del alumno (sin cuenta)');
   await pub.p.goto(`${ROOT}/alumno/${m.cardCode}?emu=1`, { waitUntil: 'networkidle2' });
@@ -168,10 +184,12 @@ try {
   await pub.p.screenshot({ path: path.join(OUT, 'e2e-04-portal-progreso.png'), fullPage: true });
   await pub.p.evaluate(() => document.querySelector('.pt-nav [data-t="entrenar"]').click()); await sleep(900);
   await pub.p.evaluate(() => document.querySelector('[data-start]')?.click()); await sleep(700);
+  ok('La rutina lleva marca de agua con su nombre y código', await pub.p.evaluate((c) => (document.querySelector('.pt-wm')?.textContent || '').includes(c), m.cardCode));
   await pub.p.evaluate(() => document.querySelector('[data-set="0-0"]')?.click()); await sleep(400);
   await pub.p.evaluate(() => document.querySelector('[data-finish]')?.click()); await sleep(600);
   await pub.p.evaluate(() => document.querySelector('.modal [data-ok]')?.click()); await sleep(2000);
   ok('Registra su entrenamiento', !!(await pub.p.$('.pt-done')));
+  ok('Sin copiar ni seleccionar la rutina', await pub.p.evaluate(() => getComputedStyle(document.querySelector('.pt-main')).userSelect === 'none' && !!document.querySelector('.pt-protect')));
   await pub.p.evaluate(() => document.querySelectorAll('.modal-backdrop').forEach((b) => b.remove()));
   await pub.p.evaluate(() => document.querySelector('.pt-nav [data-t="progreso"]').click()); await sleep(700);
   await pub.p.evaluate(() => document.querySelector('[data-weigh]').click()); await sleep(400);
@@ -194,6 +212,15 @@ try {
   ok('Marca hábitos y vasos de agua', /1\/\d+/.test(nx2) && /0,5 \//.test(nx2), nx2.match(/\d,?\d* \/ [\d,]+ L/)?.[0]);
   await pub.p.screenshot({ path: path.join(OUT, 'e2e-04c-portal-nutricion.png'), fullPage: true });
   ok('Un extraño no puede modificar el carnet', bad);
+  ok('La ficha del ejercicio ya no busca videos', await pub.p.evaluate(async () => { const g = await import('/js/exguide.js'); const E = (await import('/js/gym.js')).EXERCISES; g.exerciseSheet((Array.isArray(E) ? E[0] : Object.values(E)[0]).id); await new Promise((r) => setTimeout(r, 300)); const t = document.getElementById('modals').innerHTML; document.querySelectorAll('.modal-backdrop').forEach((b) => b.remove()); return !/youtube|Ver videos/i.test(t); }));
+  await pub.p.goto(`${ROOT}/alumno/${exp.code}?emu=1`, { waitUntil: 'networkidle2' }); await sleep(1800);
+  const sx = await text(pub.p);
+  ok('Plan vencido: el carnet sale suspendido', /Carnet suspendido/.test(sx) && /venció el/.test(sx));
+  ok('Botón para pagar por WhatsApp', await pub.p.evaluate(() => /wa\.me|whatsapp/i.test(document.querySelector('[data-pay]')?.href || '')));
+  ok('Sin acceso a rutina, comidas ni progreso', await pub.p.evaluate(() => document.querySelector('.pt-nav')?.hidden === true && !document.querySelector('[data-start], .pt-meal, [data-weigh]')));
+  await pub.p.goto(`${ROOT}/alumno/${exp.code}?emu=1&tab=entrenar`, { waitUntil: 'networkidle2' }); await sleep(1500);
+  ok('Tampoco entra con el enlace directo a «Entrenar»', /Carnet suspendido/.test(await text(pub.p)));
+  await pub.p.screenshot({ path: path.join(OUT, 'e2e-04d-carnet-suspendido.png'), fullPage: true });
   await pub.ctx.close();
 
   // ==================================================================

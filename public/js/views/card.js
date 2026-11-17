@@ -41,6 +41,10 @@ function statusOf(c) {
   return d <= 5 ? ['pv', d === 0 ? 'Vence hoy' : `Vence en ${d} día${d === 1 ? '' : 's'}`, 'warning'] : ['ok', 'Plan activo', 'success'];
 }
 
+/** Carnet suspendido: sin plan vigente (vencido, sin sesiones, sin plan o dado de baja) */
+const SUSPENDED = ['baja', 'sin', 'ven', 'ago'];
+export const isSuspended = (c) => SUSPENDED.includes(statusOf(c)[0]);
+
 function ring(pct, big, small, color = 'var(--pt-accent)') {
   const r = 34; const c = 2 * Math.PI * r; const v = Math.max(0, Math.min(100, pct));
   return `<div class="pt-ring"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="${r}" class="pt-ring-bg"/><circle cx="40" cy="40" r="${r}" stroke="${color}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - v / 100)}" class="pt-ring-fg"/></svg><div><b>${big}</b><small>${small}</small></div></div>`;
@@ -60,6 +64,28 @@ function askCode(root, wrong = '') {
   root.querySelector('[data-f]').onsubmit = (e) => { e.preventDefault(); const v = e.target.elements.code.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''); if (v) location.href = '/alumno/' + v; };
 }
 
+/** Dificulta copiar o capturar la rutina: sin selección, menú, arrastre ni impresión; se oculta al salir de la página */
+let protectedOnce = false;
+function protect(root, getTab, c) {
+  root.classList.add('pt-protect');
+  if (protectedOnce) return; protectedOnce = true;
+  const stop = (e) => { if (!e.target.closest?.('input, textarea')) e.preventDefault(); };
+  ['contextmenu', 'copy', 'cut', 'dragstart', 'selectstart'].forEach((ev) => document.addEventListener(ev, stop));
+  const hide = () => document.body.classList.add('pt-hidden');
+  const show = () => document.body.classList.remove('pt-hidden');
+  window.addEventListener('blur', hide); window.addEventListener('focus', show);
+  document.addEventListener('visibilitychange', () => (document.hidden ? hide() : show()));
+  window.addEventListener('beforeprint', hide); window.addEventListener('afterprint', show);
+  document.addEventListener('keydown', (e) => {
+    const k = e.key || '';
+    if (k === 'PrintScreen' || ((e.ctrlKey || e.metaKey) && /^[psc]$/i.test(k) && !e.target.closest?.('input, textarea')) || (e.metaKey && e.shiftKey && /^[345s]$/i.test(k))) {
+      e.preventDefault(); hide(); try { navigator.clipboard?.writeText(''); } catch (_) {}
+      toast(`Las rutinas son personales de ${c.coach || 'tu entrenador'}: no se pueden copiar ni capturar.`, 'warning'); setTimeout(show, 1500);
+    }
+  });
+  document.addEventListener('keyup', (e) => { if (e.key === 'PrintScreen') { try { navigator.clipboard?.writeText(''); } catch (_) {} } });
+}
+
 export async function mount(root) {
   document.documentElement.dataset.theme = 'dark';
   document.title = 'Mi progreso · SanoEntrenador';
@@ -72,6 +98,7 @@ export async function mount(root) {
   ls.set(LAST, code);
   try { applyLocale(c.country || 'VE'); } catch (_) {}
 
+  protect(root, () => tab, c);
   const logsRef = collection(db, 'cards', code, 'logs');
   let logs = [];
   const loadLogs = async () => { try { logs = (await getDocs(query(logsRef, orderBy('at', 'desc'), limit(150)))).docs.map((d) => ({ id: d.id, ...d.data() })); } catch (e) { console.warn(e); } };
@@ -139,6 +166,27 @@ export async function mount(root) {
       ${ach.length ? `<section class="pt-card"><div class="pt-ct between">${icon('medal')} Mis logros <button class="pt-more" data-go="progreso">Ver todo</button></div>${badgesHTML(ach, { limit: 4 })}</section>` : ''}
       <section class="pt-card pt-coach"><div class="pt-coach-av">${icon('user')}</div><div class="grow"><span class="pt-k">Mi entrenador</span><b>${esc(c.coach || c.brand || 'Entrenador')}</b>${c.specialty ? `<small>${esc(c.specialty)}</small>` : ''}</div>
         <div class="pt-coach-a">${coachWa('') ? `<a class="btn btn-whatsapp btn-sm" href="${coachWa(`Hola ${c.coach || ''}, soy ${c.name}.`)}" target="_blank" rel="noopener">${icon('whatsapp')} Escribir</a>` : ''}${c.coachIg ? `<a class="btn btn-secondary btn-sm" href="https://instagram.com/${esc(String(c.coachIg).replace(/^@/, ''))}" target="_blank" rel="noopener">@${esc(String(c.coachIg).replace(/^@/, ''))}</a>` : ''}</div></section>`;
+  }
+
+  // ---------- Carnet suspendido ----------
+  function suspendedHTML() {
+    const [st] = statusOf(c);
+    const why = st === 'ven' ? `Tu plan <b>${esc(p.name)}</b> venció el <b>${fmtDate(p.end)}</b>.`
+      : st === 'ago' ? `Usaste todas las sesiones de tu plan <b>${esc(p.name)}</b>.`
+      : st === 'baja' ? 'Tu entrenador desactivó tu carnet.' : 'No tienes un plan activo.';
+    const payMsg = `Hola ${c.coach || ''}, soy ${c.name}${c.number ? ` (N° ${c.number})` : ''}. Quiero pagar ${p?.name ? `mi plan «${p.name}»` : 'mi plan'} para reactivar mi carnet. ¿Cómo te pago?`;
+    return `
+      <section class="pt-card pt-susp">
+        <div class="pt-susp-ic">${icon('lock')}</div>
+        <span class="pt-badge tone-danger">Carnet suspendido</span>
+        <h1>Hola, ${esc(first)}</h1>
+        <p>${why}</p>
+        <p class="pt-muted">Tu rutina, tu plan de comidas, tu nutrición y tu progreso se reactivan en cuanto pagues. Todo lo que llevas registrado queda guardado.</p>
+        ${coachWa('') ? `<a class="btn btn-primary btn-lg btn-block pt-pay" data-pay href="${coachWa(payMsg)}" target="_blank" rel="noopener">${icon('dollar')} Pagar mi plan</a>` : `<p class="pt-muted">Habla con tu entrenador para renovar tu plan.</p>`}
+        ${c.coachPage ? `<a class="btn btn-secondary btn-block" href="/coach/${esc(c.coachPage)}" target="_blank" rel="noopener">${icon('ticket')} Ver planes y precios</a>` : ''}
+        <div class="pt-locked">${[['dumbbell', 'Rutina'], ['utensils', 'Comidas'], ['trend', 'Progreso'], ['history', 'Historial']].map(([i, l]) => `<span>${icon(i)}${l}${icon('lock')}</span>`).join('')}</div>
+      </section>
+      <section class="pt-card pt-coach"><div class="pt-coach-av">${icon('user')}</div><div class="grow"><span class="pt-k">Mi entrenador</span><b>${esc(c.coach || c.brand || 'Entrenador')}</b><small>N° de alumno ${esc(c.number || '—')} · ${esc(code)}</small></div></section>`;
   }
 
   // ---------- Comidas (plan de alimentación) ----------
@@ -300,12 +348,14 @@ export async function mount(root) {
   let tick = null; let restT = null;
   function draw() {
     clearInterval(tick);
-    const body = tab === 'entrenar' ? entrenarHTML() : tab === 'comidas' ? comidasHTML() : tab === 'progreso' ? progresoHTML() : tab === 'historial' ? historialHTML() : inicioHTML();
+    const susp = isSuspended(c);
+    const body = susp ? suspendedHTML() : tab === 'entrenar' ? entrenarHTML() : tab === 'comidas' ? comidasHTML() : tab === 'progreso' ? progresoHTML() : tab === 'historial' ? historialHTML() : inicioHTML();
     root.innerHTML = `<div class="pt-page">
-      <header class="pt-top"><img src="/assets/logo.svg" alt="" width="34" height="34"><div class="grow"><b>${esc(c.brand || c.coach || 'SanoEntrenador')}</b><small>${esc(tabs[tab][1] === 'Inicio' ? 'Mi carnet' : tabs[tab][1])}</small></div><span class="pt-avatar">${esc((first[0] || 'A').toUpperCase())}</span></header>
+      <header class="pt-top"><img src="/assets/logo.svg" alt="" width="34" height="34"><div class="grow"><b>${esc(c.brand || c.coach || 'SanoEntrenador')}</b><small>${susp ? 'Carnet suspendido' : esc(tabs[tab][1] === 'Inicio' ? 'Mi carnet' : tabs[tab][1])}</small></div><span class="pt-avatar">${esc((first[0] || 'A').toUpperCase())}</span></header>
       <main class="pt-main" data-tab="${tab}">${body}</main>
       <p class="pt-by">Hecho con <b>SanoEntrenador</b> · Agrega esta página a tu pantalla de inicio para tenerla siempre a mano.</p>
-      <nav class="pt-nav">${Object.entries(tabs).map(([k, [ic, l]]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}">${icon(ic)}<span>${l}</span></button>`).join('')}</nav>
+      ${!susp && tab === 'entrenar' ? `<div class="pt-wm" aria-hidden="true"><div>${Array.from({ length: 36 }, () => `<span>${esc(c.name)} · ${esc(code)} · ${esc(c.coach || '')}</span>`).join('')}</div></div>` : ''}
+      <nav class="pt-nav" ${susp ? 'hidden' : ''}>${Object.entries(tabs).map(([k, [ic, l]]) => `<button class="${tab === k ? 'on' : ''}" data-t="${k}">${icon(ic)}<span>${l}</span></button>`).join('')}</nav>
       <div class="pt-rest" data-restbar hidden><div class="pt-rest-in"><span class="pt-k">Descanso</span><b data-rest-t>0:00</b><div class="pt-rest-bar"><i data-rest-i></i></div><div class="row"><button class="pt-more" data-rest-add>+15 s</button><button class="pt-more" data-rest-skip>Saltar</button></div></div></div>
     </div>`;
     root.querySelectorAll('[data-t]').forEach((b) => b.onclick = () => { tab = b.dataset.t; history.replaceState(null, '', location.pathname + (tab === 'inicio' ? '' : '?tab=' + tab)); draw(); window.scrollTo(0, 0); });

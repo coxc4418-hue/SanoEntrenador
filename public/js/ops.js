@@ -83,7 +83,7 @@ export function cardData(m, extra = {}) {
   const first = String(m.name || '').trim().split(/\s+/);
   const S = store.settings;
   return {
-    tenantId: store.tenantId, coach: store.coachName, brand: store.businessName, coachPhone: S.whatsapp || S.phone || '', coachIg: S.instagram || '', specialty: S.specialty || '',
+    tenantId: store.tenantId, coach: store.coachName, brand: store.businessName, coachPhone: S.whatsapp || S.phone || '', coachIg: S.instagram || '', specialty: S.specialty || '', coachPage: S.page?.published && S.page?.slug ? S.page.slug : '',
     country: S.country || '', name: first.length > 1 ? `${first[0]} ${first[first.length - 1]}` : first[0] || 'Alumno', number: m.number || '',
     active: m.active !== false, plan: ms ? { name: ms.planName, kind: ms.kind, start: ms.start, end: ms.end, visitsLeft: ms.visitsLeft ?? null, visits: ms.visits ?? null, frozenFrom: ms.frozenFrom || null, frozenUntil: ms.frozenUntil || null, status: ms.status || 'activa', online: !!ms.online, withDiet: !!ms.withDiet, withNutri: !!ms.withNutri } : null,
     debt: (Number(m.balance) || 0) > 0.009, visits: Number(m.visits) || 0, lastCheckinAt: m.lastCheckinAt || null, since: m.createdAt || null,

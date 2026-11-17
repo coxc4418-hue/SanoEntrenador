@@ -8,7 +8,7 @@ import { rateChip, startBcv } from './bcv.js';
 import { openCountryPicker, salesWa, SALES_PHONE_FMT } from './shared.js';
 import { isStandalone, platform, bindInstallButtons } from './install.js';
 
-export const VERSION = '1.2.1';
+export const VERSION = '1.3.0';
 
 const ROUTES = {
   inicio: { title: 'Inicio', icon: 'home', group: 'Entrenamiento', load: () => import('./views/dashboard.js') },
