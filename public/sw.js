@@ -1,5 +1,5 @@
 // SanoEntrenador — Service Worker (PWA, funcionamiento sin conexión)
-const VERSION = 'sanoentrenador-v1.3.0';
+const VERSION = 'sanoentrenador-v1.3.1';
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const VIEWS = ['dashboard', 'agenda', 'checkin', 'members', 'routines', 'nutrition', 'reminders', 'payments', 'reports', 'settings', 'admin', 'search', 'card', 'coach'];
 const SHELL = [

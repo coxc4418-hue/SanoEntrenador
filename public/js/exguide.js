@@ -1,7 +1,7 @@
 // SanoEntrenador — Guía de ejercicios: músculos que trabaja (mapa corporal propio en SVG),
 // cómo hacerlo paso a paso, consejo y error común, prescripción por objetivo y generador de rutinas.
 // No depende de la sesión: lo usan el entrenador y el carnet del alumno.
-import { EXERCISES, MUSCLE_GROUPS, exercise } from './gym.js';
+import { EXERCISES, MUSCLE_GROUPS, exercise, exVideo } from './gym.js';
 import { esc, openModal, normalize } from './utils.js';
 import { icon } from './icons.js';
 
@@ -239,6 +239,7 @@ export function exerciseSheet(exOrId, { item = null, lastLoad = '', goal = '' } 
         ${g.mistake ? `<div class="exs-bad">${icon('alert')}<span><b>Evita:</b> ${esc(g.mistake)}</span></div>` : ''}
         ${!item && !cardio ? `<div class="exs-h">${icon('target')} Recomendado según el objetivo</div><div class="exs-table">${Object.values(PRESCRIPTIONS).map((p) => `<div><b>${esc(p.label)}</b><span>${p.sets}×${esc(p.reps)}</span><small>${p.rest} s · ${esc(p.load)}</small></div>`).join('')}</div>` : ''}
         ${item && !cardio && P ? `<p class="small muted">${icon('info')} ${esc(P.rir)}.</p>` : ''}
+        <a class="btn btn-secondary btn-block" href="${exVideo(g.name)}" target="_blank" rel="noopener">${icon('eye')} Ver videos de la técnica</a>
       </div></div>`,
     footer: '<button class="btn btn-primary" data-close>Entendido</button>'
   });
