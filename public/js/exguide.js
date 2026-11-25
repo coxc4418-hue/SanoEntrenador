@@ -1,7 +1,7 @@
 // SanoEntrenador — Guía de ejercicios: músculos que trabaja (mapa corporal propio en SVG),
 // cómo hacerlo paso a paso, consejo y error común, prescripción por objetivo y generador de rutinas.
 // No depende de la sesión: lo usan el entrenador y el carnet del alumno.
-import { EXERCISES, MUSCLE_GROUPS, exercise, exVideo } from './gym.js';
+import { EXERCISES, MUSCLE_GROUPS, exercise, exVideo, youtubeId } from './gym.js';
 import { esc, openModal, normalize } from './utils.js';
 import { icon } from './icons.js';
 
@@ -25,6 +25,8 @@ const G = {
   pbm: ['pec', 'tri del', 'Siéntate con las mancuernas sobre los muslos y recuéstate llevándolas al pecho.|Con las palmas hacia los pies, empuja hasta estirar los brazos sobre el pecho.|Baja abriendo un poco los codos hasta sentir el estiramiento del pecho.|Sube juntando ligeramente las mancuernas arriba.', 'Las mancuernas permiten más recorrido que la barra: aprovéchalo sin forzar el hombro.', 'Bajar demasiado rápido y perder el control de las mancuernas.'],
   pi: ['pec', 'del tri', 'Ajusta el banco a 30–45° y recuéstate con los pies firmes.|Toma la barra algo más ancha que los hombros.|Baja hasta la parte alta del pecho, cerca de las clavículas.|Empuja hasta estirar los brazos.', 'La inclinación trabaja más la parte alta del pecho.', 'Inclinar demasiado el banco: se convierte en un ejercicio de hombro.'],
   pim: ['pec', 'del tri', 'Banco a 30–45°, mancuernas a la altura del pecho.|Empuja hacia arriba juntándolas sobre la cara.|Baja lento hasta sentir el estiramiento.|Repite sin perder la posición de la espalda.', 'Aprieta el pecho arriba durante un segundo.', 'Arquear demasiado la espalda baja.'],
+  pmac: ['pec', 'tri del', 'Acuéstate en el banco de la máquina con la espalda y cabeza apoyadas y los pies firmes en el piso.|Ajusta las manijas a la altura media del pecho y junta las escápulas.|Empuja hacia arriba hasta casi estirar los brazos sin bloquear los codos.|Baja controlado en 2–3 segundos hasta sentir un buen estiramiento del pectoral.', 'Mantén los codos a unos 45° respecto al torso para proteger los hombros.', 'Despegar los hombros del respaldo o dejar caer el peso al bajar.'],
+  pimac: ['pec', 'del tri', 'Ajusta el asiento de la máquina inclinada para que las manijas queden a la altura de la parte alta del pecho.|Apoya la espalda y las escápulas firmes contra el respaldo.|Empuja hacia arriba siguiendo la trayectoria de la máquina sin bloquear los codos.|Desciende lento y controlado hasta el punto de máximo estiramiento cómodo.', 'Excelente para enfatizar la porción superior (clavicular) del pectoral con máxima estabilidad.', 'Encoger los hombros hacia las orejas o despegar la espalda del respaldo.'],
   pd: ['pec', 'tri', 'Asegura los pies en el banco declinado.|Toma la barra a lo ancho de los hombros.|Baja hasta la parte baja del pecho.|Empuja hasta estirar los brazos.', 'Pide ayuda para sacar y dejar la barra.', 'Bajar la barra hacia el cuello.'],
   ap: ['pec', 'del', 'Acostado en el banco, sube las mancuernas con las palmas enfrentadas.|Con los codos un poco doblados, abre los brazos en arco.|Baja hasta sentir el estiramiento del pecho.|Cierra como si abrazaras un árbol.', 'Usa peso moderado: es un ejercicio de aislamiento.', 'Estirar los codos por completo y cargar la articulación.'],
   cc: ['pec', 'del', 'Párate en el centro de las poleas altas con un pie adelante.|Con los codos levemente doblados, lleva las manijas hacia abajo y al frente.|Junta las manos frente a la cadera y aprieta el pecho.|Regresa lento hasta sentir el estiramiento.', 'Inclina un poco el torso hacia adelante y mantenlo fijo.', 'Convertirlo en un empuje usando los tríceps.'],
@@ -43,6 +45,7 @@ const G = {
   hip: ['lum', 'glu fem', 'Ajusta el banco con la cadera apoyada en el borde.|Cruza los brazos en el pecho.|Baja el torso con la espalda recta.|Sube hasta alinear el cuerpo, sin pasarte.', 'Movimiento lento y controlado.', 'Hiperextender la espalda arriba.'],
   pmil: ['del', 'tri tra abs', 'De pie, barra sobre la parte alta del pecho y manos un poco más anchas que los hombros.|Aprieta abdomen y glúteos.|Empuja la barra sobre la cabeza.|Baja controlado a la clavícula.', 'Mete la cabeza hacia adelante cuando la barra pase.', 'Arquear mucho la espalda baja.'],
   pmm: ['del', 'tri tra', 'Sentado con respaldo, mancuernas a la altura de las orejas.|Empuja hacia arriba juntándolas un poco.|Baja hasta que los codos queden a 90°.|Repite.', 'Espalda pegada al respaldo.', 'Chocar las mancuernas arriba y perder tensión.'],
+  phmac: ['del', 'tri tra', 'Ajusta el asiento para que las manijas queden a la altura de tus hombros o mentón.|Apoya completamente la espalda contra el respaldo y fija los pies en el piso.|Empuja hacia arriba de forma controlada hasta casi extender los brazos.|Baja lento hasta la altura de las orejas manteniendo tensión constante en los hombros.', 'El recorrido guiado permite concentrarte al 100 % en los deltoides con menos fatiga estabilizadora.', 'Arquear la zona lumbar o golpear las placas al bajar.'],
   arn: ['del', 'tri', 'Empieza con las mancuernas al frente y las palmas hacia ti.|Al empujar, gira las muñecas hasta que las palmas miren al frente.|Termina con los brazos estirados.|Baja deshaciendo el giro.', 'Trabaja las tres partes del hombro.', 'Hacer el giro muy rápido.'],
   el: ['del', 'tra', 'De pie, mancuernas a los lados con los codos un poco doblados.|Eleva los brazos hacia los lados hasta la altura de los hombros.|Pausa un segundo.|Baja lento.', 'Imagina que vacías dos jarras: el meñique un poco más alto.', 'Subir los hombros hacia las orejas o balancearse.'],
   ef: ['del', 'pec', 'Mancuernas frente a los muslos.|Eleva un brazo al frente hasta la altura de los ojos.|Baja lento y alterna.|Mantén el torso quieto.', 'No necesitas mucho peso.', 'Balancear el cuerpo para subir.'],
@@ -70,6 +73,7 @@ const G = {
   zan: ['cua glu', 'fem adu', 'De pie con mancuernas.|Da un paso largo al frente.|Baja hasta que ambas rodillas queden a 90°.|Empuja con el pie de adelante para volver.', 'El torso recto y la rodilla de adelante sobre el pie.', 'Pasos muy cortos que cargan la rodilla.'],
   bul: ['cua glu', 'adu', 'Pie de atrás apoyado en un banco.|Pie de adelante a un paso largo.|Baja recto hasta que el muslo quede paralelo.|Sube empujando con el talón de adelante.', 'Inclinar un poco el torso trabaja más el glúteo.', 'Pie de adelante muy cerca del banco.'],
   hack: ['cua', 'glu', 'Espalda pegada al respaldo, pies en la plataforma.|Libera los seguros.|Baja controlado.|Sube sin bloquear las rodillas.', 'Permite cargar sin estresar la espalda.', 'Bajar demasiado rápido.'],
+  sqpen: ['cua glu', 'fem abs', 'Apoya firmemente la espalda y los hombros en los cojines de la máquina pendular y coloca los pies en la plataforma.|Libera el seguro y mantén el abdomen firme antes de iniciar el descenso.|Baja de forma profunda y controlada dejando que las rodillas avancen en línea con las puntas de los pies.|Empuja con toda la planta del pie hasta subir casi por completo sin bloquear las rodillas.', 'Su arco pendular reduce la carga lumbar y permite una flexión profunda brutal para el cuádriceps.', 'Despegar los talones de la plataforma o rebotar en el fondo del recorrido.'],
   step: ['cua glu', 'pan', 'Frente a un cajón estable.|Sube un pie completo.|Empuja con esa pierna hasta quedar de pie arriba.|Baja controlado.', 'Empuja con la pierna de arriba, no con la de abajo.', 'Cajón muy alto al empezar.'],
   pmr: ['fem glu', 'lum', 'De pie con la barra frente a los muslos.|Rodillas un poco dobladas.|Lleva la cadera atrás bajando la barra pegada a las piernas.|Sube apretando glúteos.', 'Para cuando sientas el estiramiento del femoral.', 'Redondear la espalda.'],
   cfem: ['fem', 'pan', 'Acostado boca abajo, rodillo sobre los tobillos.|Dobla las rodillas llevando los talones al glúteo.|Pausa.|Baja lento.', 'Cadera pegada al banco.', 'Levantar la cadera.'],
@@ -108,6 +112,8 @@ const G = {
   trx: ['dor', 'bic abs', 'Toma las manijas, cuerpo recto inclinado.|Tira el pecho hacia las manos.|Junta las escápulas.|Baja lento.', 'Más inclinado = más difícil.', 'Dejar caer la cadera.'],
   thr: ['cua del', 'glu tri cor', 'Barra al frente sobre los hombros.|Sentadilla frontal.|Al subir, empuja la barra arriba.|Encadena.', 'Un movimiento fluido.', 'Separar en dos movimientos.'],
   sled: ['cua glu', 'pan cor', 'Manos en el trineo.|Cuerpo inclinado.|Empuja con pasos cortos.|Constante.', 'Muy bajo impacto.', 'Torso muy erguido.'],
+  calsup: ['del pec dor', 'tra bic tri', 'Inicia con movilidad articular suave de cuello, hombros (círculos amplios) y muñecas durante 1–2 minutos.|Realiza aperturas y cruces de brazos dinámicos más retracciones escapulares controladas.|Haz rotaciones externas e internas de hombro (con banda ligera o peso corporal) para activar el manguito rotador.|Termina con 1–2 series ligeras de aproximación del primer ejercicio de empuje o tirón.', 'Dedica 5–8 minutos antes de entrenar pecho, espalda u hombros para lubricar articulaciones y prevenir lesiones.', 'Hacer estiramientos estáticos largos y fuertes antes de levantar pesado o entrar en frío a las cargas altas.'],
+  calinf: ['cua glu fem', 'adu pan lum', 'Comienza con 2–3 minutos de movilidad de tobillos y círculos amplios de cadera.|Realiza balanceos dinámicos de piernas (adelante-atrás y laterales) y movilidad de cadera en sentadilla profunda asistida.|Activa glúteos y femorales con 1–2 series suaves de puentes de glúteo y sentadillas con peso corporal.|Finaliza con 1–2 series ligeras de aproximación en tu primer ejercicio de pierna.', 'Un buen calentamiento mejora la profundidad en sentadilla y protege rodillas y zona lumbar.', 'Saltarse la activación de cadera y tobillos o fatigarse en exceso antes de las series efectivas.'],
   mov1: ['glu adu', '', 'Sentado con ambas piernas a 90°.|Torso erguido.|Gira hacia el otro lado.|Mantén.', 'Respira profundo.', 'Forzar.'],
   mov2: ['fem', 'pan', 'Pierna estirada.|Inclínate desde la cadera.|Espalda recta.|Mantén 30 s.', 'Sin rebotes.', 'Redondear la espalda.'],
   mov3: ['lum', 'abs', 'En cuatro apoyos.|Redondea la espalda.|Luego arquea.|Lento.', 'Sincroniza con la respiración.', 'Hacerlo rápido.'],
@@ -224,9 +230,19 @@ export const goalKey = (goal = '') => /fuerza|deport/i.test(goal) ? 'fuerza' : /
 
 /** Ficha del ejercicio en un modal (entrenador y alumno) */
 export function exerciseSheet(exOrId, { item = null, lastLoad = '', goal = '' } = {}) {
-  const g = guide(exOrId) || { name: typeof exOrId === 'string' ? exOrId : exOrId?.name || 'Ejercicio', group: '', eq: '', primary: [], secondary: [], steps: [], tip: '', mistake: '', home: false };
+  const g = guide(exOrId) || { name: typeof exOrId === 'string' ? exOrId : exOrId?.name || 'Ejercicio', group: '', eq: '', primary: [], secondary: [], steps: [], tip: '', mistake: '', home: false, video: '' };
   const P = PRESCRIPTIONS[goalKey(goal)];
   const cardio = g.group === 'Cardio' || g.group === 'Movilidad';
+  const yt = youtubeId(g.video || '');
+  const isShort = /\/shorts\//i.test(g.video || '');
+  const videoBlock = yt
+    ? `<div class="exs-vid${isShort ? ' is-short' : ''}" data-yt="${esc(yt)}">
+        <button type="button" class="exs-vid-cover" data-play-yt aria-label="Reproducir video de técnica">
+          <img src="https://i.ytimg.com/vi/${esc(yt)}/hqdefault.jpg" alt="Video: ${esc(g.name)}" loading="lazy">
+          <span class="exs-vid-play">${icon('play')}<span>Reproducir video de técnica</span></span>
+        </button>
+      </div>`
+    : '';
   const m = openModal({
     title: esc(g.name), sub: [g.group, g.eq, g.home ? 'Se puede en casa' : 'Gimnasio'].filter(Boolean).map(esc).join(' · '), size: 'lg',
     body: `<div class="exs">
@@ -234,16 +250,23 @@ export function exerciseSheet(exOrId, { item = null, lastLoad = '', goal = '' } 
         <div class="exs-legend">${g.primary.length ? `<span><i class="bm-dot p"></i>${g.primary.map((k) => esc(MUSCLES[k] || k)).join(', ')}</span>` : ''}${g.secondary.length ? `<span><i class="bm-dot s"></i>${g.secondary.map((k) => esc(MUSCLES[k] || k)).join(', ')}</span>` : ''}</div></div>
       <div class="exs-info">
         ${item ? `<div class="exs-rx"><div><small>Series</small><b>${esc(item.sets || '—')}</b></div><div><small>Reps</small><b>${esc(item.reps || '—')}</b></div><div><small>Descanso</small><b>${item.rest ? esc(item.rest) + ' s' : '—'}</b></div>${item.weight || lastLoad ? `<div><small>Carga</small><b>${esc(item.weight || lastLoad)}</b></div>` : ''}</div>` : ''}
+        ${videoBlock}
         ${g.steps.length ? `<div class="exs-h">${icon('list')} Cómo hacerlo</div><ol class="exs-steps">${g.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>` : '<p class="muted">Pídele a tu entrenador que te muestre la técnica.</p>'}
         ${g.tip ? `<div class="exs-tip">${icon('sparkle')}<span><b>Consejo:</b> ${esc(g.tip)}</span></div>` : ''}
         ${g.mistake ? `<div class="exs-bad">${icon('alert')}<span><b>Evita:</b> ${esc(g.mistake)}</span></div>` : ''}
         ${!item && !cardio ? `<div class="exs-h">${icon('target')} Recomendado según el objetivo</div><div class="exs-table">${Object.values(PRESCRIPTIONS).map((p) => `<div><b>${esc(p.label)}</b><span>${p.sets}×${esc(p.reps)}</span><small>${p.rest} s · ${esc(p.load)}</small></div>`).join('')}</div>` : ''}
         ${item && !cardio && P ? `<p class="small muted">${icon('info')} ${esc(P.rir)}.</p>` : ''}
-        <a class="btn btn-secondary btn-block" href="${exVideo(g.name)}" target="_blank" rel="noopener">${icon('eye')} Ver videos de la técnica</a>
+        <a class="btn btn-secondary btn-block" href="${exVideo(g)}" target="_blank" rel="noopener">${icon('eye')} ${yt ? 'Abrir video en YouTube' : 'Ver videos de la técnica'}</a>
       </div></div>`,
     footer: '<button class="btn btn-primary" data-close>Entendido</button>'
   });
   m.el.querySelector('.modal')?.classList.add('exs-modal');
+  m.el.querySelector('[data-play-yt]')?.addEventListener('click', (ev) => {
+    const box = ev.currentTarget.closest('.exs-vid');
+    const id = box?.dataset.yt;
+    if (!box || !id) return;
+    box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0" title="${esc(g.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
+  });
   return m;
 }
 
@@ -269,9 +292,9 @@ const SPLITS = {
 };
 // Orden de preferencia por grupo (gimnasio y casa): primero los básicos más efectivos
 const PRIO_GYM = {
-  Pecho: ['pb', 'pim', 'pbm', 'pi', 'fp', 'cc', 'pec', 'ap', 'fl', 'pd'], Espalda: ['dom', 'rb', 'jal', 'rs', 'rm', 'rt', 'jalc', 'pm', 'pul', 'trx', 'hip'],
-  Hombros: ['pmm', 'el', 'pmil', 'fp2', 'arn', 'pajp', 'ef', 'rmen', 'enc'], Bíceps: ['cb', 'cm', 'cmar', 'cpr', 'cpol', 'ccon'], Tríceps: ['ext', 'pfr', 'pcer', 'extn', 'pk', 'fb'],
-  Cuádriceps: ['sq', 'pre', 'bul', 'sqg', 'hack', 'zan', 'ext2', 'sqf', 'step'], 'Femorales y glúteos': ['pmr', 'ht', 'cfem', 'cfs', 'pg', 'abd', 'pat', 'kb', 'add'],
+  Pecho: ['pb', 'pim', 'pbm', 'pmac', 'pimac', 'pi', 'fp', 'cc', 'pec', 'ap', 'fl', 'pd'], Espalda: ['dom', 'rb', 'jal', 'rs', 'rm', 'rt', 'jalc', 'pm', 'pul', 'trx', 'hip'],
+  Hombros: ['pmm', 'phmac', 'el', 'pmil', 'fp2', 'arn', 'pajp', 'ef', 'rmen', 'enc'], Bíceps: ['cb', 'cm', 'cmar', 'cpr', 'cpol', 'ccon'], Tríceps: ['ext', 'pfr', 'pcer', 'extn', 'pk', 'fb'],
+  Cuádriceps: ['sq', 'pre', 'sqpen', 'bul', 'sqg', 'hack', 'zan', 'ext2', 'sqf', 'step'], 'Femorales y glúteos': ['pmr', 'ht', 'cfem', 'cfs', 'pg', 'abd', 'pat', 'kb', 'add'],
   Pantorrillas: ['pp', 'ps', 'ppr'], 'Abdomen y core': ['pl', 'cr', 'pal', 'ep', 'pll', 'rr', 'bic', 'rus', 'dbug']
 };
 const PRIO_HOME = {
@@ -280,7 +303,7 @@ const PRIO_HOME = {
   'Femorales y glúteos': ['pmmn', 'pg', 'pg1', 'kb', 'pmu', 'patc', 'mons'], Pantorrillas: ['ppc'], 'Abdomen y core': ['pl', 'dbug', 'cr', 'pll', 'bic', 'ept', 'pts', 'mc', 'rus', 'rr']
 };
 // Básicos primero (los compuestos van al inicio del día)
-const COMPOUND = new Set(['pb', 'pbm', 'pi', 'pim', 'fl', 'fp', 'dom', 'jal', 'rb', 'rm', 'rs', 'pm', 'pmil', 'pmm', 'sq', 'sqg', 'sqf', 'pre', 'zan', 'bul', 'hack', 'pmr', 'ht', 'kb', 'thr', 'trx', 'fli', 'fldc', 'pps', 'rmi', 'rbe', 'pike', 'sqc', 'zat', 'sqs', 'pmmn', 'pmu', 'pcer', 'fld']);
+const COMPOUND = new Set(['pb', 'pbm', 'pi', 'pim', 'pmac', 'pimac', 'fl', 'fp', 'dom', 'jal', 'rb', 'rm', 'rs', 'pm', 'pmil', 'pmm', 'phmac', 'sq', 'sqg', 'sqf', 'pre', 'zan', 'bul', 'hack', 'sqpen', 'pmr', 'ht', 'kb', 'thr', 'trx', 'fli', 'fldc', 'pps', 'rmi', 'rbe', 'pike', 'sqc', 'zat', 'sqs', 'pmmn', 'pmu', 'pcer', 'fld']);
 const EASY = new Set(['pm', 'sqf', 'tgu', 'dom', 'fp', 'ep', 'rr', 'box', 'sqj', 'thr', 'pike', 'fldc']);
 
 /**

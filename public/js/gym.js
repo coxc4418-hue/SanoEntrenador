@@ -213,15 +213,16 @@ export const MEASURES = [
 // BIBLIOTECA DE EJERCICIOS: [id, nombre, grupo, equipo]
 // ======================================================================
 export const MUSCLE_GROUPS = ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Cuádriceps', 'Femorales y glúteos', 'Pantorrillas', 'Abdomen y core', 'Cardio', 'Funcional', 'Movilidad'];
-const X = (id, name, group, eq) => ({ id, name, group, eq });
+const X = (id, name, group, eq, video = '') => ({ id, name, group, eq, ...(video ? { video } : {}) });
 export const EXERCISES = [
   X('pb', 'Press de banca con barra', 'Pecho', 'Barra'), X('pbm', 'Press de banca con mancuernas', 'Pecho', 'Mancuernas'), X('pi', 'Press inclinado con barra', 'Pecho', 'Barra'),
-  X('pim', 'Press inclinado con mancuernas', 'Pecho', 'Mancuernas'), X('pd', 'Press declinado', 'Pecho', 'Barra'), X('ap', 'Aperturas con mancuernas', 'Pecho', 'Mancuernas'),
+  X('pim', 'Press inclinado con mancuernas', 'Pecho', 'Mancuernas'), X('pmac', 'Press de pecho acostado en máquina', 'Pecho', 'Máquina', 'https://youtube.com/shorts/m-KFtIghoqw'),
+  X('pimac', 'Press de pecho inclinado en máquina', 'Pecho', 'Máquina', 'https://youtube.com/shorts/IXyGQ24f2DM'), X('pd', 'Press declinado', 'Pecho', 'Barra'), X('ap', 'Aperturas con mancuernas', 'Pecho', 'Mancuernas'),
   X('cc', 'Cruce de poleas', 'Pecho', 'Polea'), X('pec', 'Pec deck (contractor)', 'Pecho', 'Máquina'), X('fl', 'Flexiones de pecho', 'Pecho', 'Peso corporal'), X('fp', 'Fondos en paralelas', 'Pecho', 'Peso corporal'),
   X('dom', 'Dominadas', 'Espalda', 'Peso corporal'), X('jal', 'Jalón al pecho', 'Espalda', 'Polea'), X('jalc', 'Jalón con agarre cerrado', 'Espalda', 'Polea'), X('rb', 'Remo con barra', 'Espalda', 'Barra'),
   X('rm', 'Remo con mancuerna a una mano', 'Espalda', 'Mancuernas'), X('rs', 'Remo sentado en polea', 'Espalda', 'Polea'), X('rt', 'Remo en T', 'Espalda', 'Barra'), X('pm', 'Peso muerto', 'Espalda', 'Barra'),
   X('pul', 'Pullover en polea', 'Espalda', 'Polea'), X('hip', 'Hiperextensiones lumbares', 'Espalda', 'Banco'),
-  X('pmil', 'Press militar con barra', 'Hombros', 'Barra'), X('pmm', 'Press de hombros con mancuernas', 'Hombros', 'Mancuernas'), X('arn', 'Press Arnold', 'Hombros', 'Mancuernas'),
+  X('pmil', 'Press militar con barra', 'Hombros', 'Barra'), X('pmm', 'Press de hombros con mancuernas', 'Hombros', 'Mancuernas'), X('phmac', 'Press de hombro en máquina', 'Hombros', 'Máquina', 'https://youtube.com/shorts/BqdJeb6jHko'), X('arn', 'Press Arnold', 'Hombros', 'Mancuernas'),
   X('el', 'Elevaciones laterales', 'Hombros', 'Mancuernas'), X('ef', 'Elevaciones frontales', 'Hombros', 'Mancuernas'), X('pajp', 'Pájaros (deltoide posterior)', 'Hombros', 'Mancuernas'),
   X('fp2', 'Face pull en polea', 'Hombros', 'Polea'), X('rmen', 'Remo al mentón', 'Hombros', 'Barra'), X('enc', 'Encogimientos de trapecio', 'Hombros', 'Mancuernas'),
   X('cb', 'Curl con barra', 'Bíceps', 'Barra'), X('cm', 'Curl alterno con mancuernas', 'Bíceps', 'Mancuernas'), X('cmar', 'Curl martillo', 'Bíceps', 'Mancuernas'),
@@ -230,7 +231,7 @@ export const EXERCISES = [
   X('fb', 'Fondos en banco', 'Tríceps', 'Peso corporal'), X('pcer', 'Press de banca agarre cerrado', 'Tríceps', 'Barra'), X('extn', 'Extensión tras nuca', 'Tríceps', 'Mancuernas'),
   X('sq', 'Sentadilla con barra', 'Cuádriceps', 'Barra'), X('sqg', 'Sentadilla goblet', 'Cuádriceps', 'Mancuernas'), X('sqf', 'Sentadilla frontal', 'Cuádriceps', 'Barra'),
   X('pre', 'Prensa de piernas', 'Cuádriceps', 'Máquina'), X('ext2', 'Extensión de cuádriceps', 'Cuádriceps', 'Máquina'), X('zan', 'Zancadas (estocadas)', 'Cuádriceps', 'Mancuernas'),
-  X('bul', 'Sentadilla búlgara', 'Cuádriceps', 'Mancuernas'), X('hack', 'Sentadilla hack', 'Cuádriceps', 'Máquina'), X('step', 'Subidas al cajón (step-up)', 'Cuádriceps', 'Cajón'),
+  X('bul', 'Sentadilla búlgara', 'Cuádriceps', 'Mancuernas'), X('hack', 'Sentadilla hack', 'Cuádriceps', 'Máquina'), X('sqpen', 'Sentadilla pendular', 'Cuádriceps', 'Máquina', 'https://youtube.com/shorts/RsSGq7aN_ww'), X('step', 'Subidas al cajón (step-up)', 'Cuádriceps', 'Cajón'),
   X('pmr', 'Peso muerto rumano', 'Femorales y glúteos', 'Barra'), X('cfem', 'Curl femoral acostado', 'Femorales y glúteos', 'Máquina'), X('cfs', 'Curl femoral sentado', 'Femorales y glúteos', 'Máquina'),
   X('ht', 'Hip thrust', 'Femorales y glúteos', 'Barra'), X('pg', 'Puente de glúteos', 'Femorales y glúteos', 'Peso corporal'), X('pat', 'Patada de glúteo en polea', 'Femorales y glúteos', 'Polea'),
   X('abd', 'Abducción de cadera', 'Femorales y glúteos', 'Máquina'), X('add', 'Aducción de cadera', 'Femorales y glúteos', 'Máquina'), X('kb', 'Swing con pesa rusa', 'Femorales y glúteos', 'Pesa rusa'),
@@ -243,6 +244,7 @@ export const EXERCISES = [
   X('bur', 'Burpees', 'Funcional', 'Peso corporal'), X('wb', 'Wall ball', 'Funcional', 'Balón medicinal'), X('fw', 'Paseo del granjero', 'Funcional', 'Mancuernas'),
   X('bat', 'Cuerdas de batalla', 'Funcional', 'Cuerdas'), X('box', 'Saltos al cajón', 'Funcional', 'Cajón'), X('tgu', 'Levantamiento turco', 'Funcional', 'Pesa rusa'),
   X('trx', 'Remo en TRX', 'Funcional', 'TRX'), X('thr', 'Thrusters', 'Funcional', 'Barra'), X('sled', 'Empuje de trineo', 'Funcional', 'Trineo'),
+  X('calsup', 'Calentamiento del tren superior', 'Movilidad', 'Peso corporal', 'https://youtu.be/_8ie8LgxjZ0'), X('calinf', 'Calentamiento del tren inferior', 'Movilidad', 'Peso corporal', 'https://youtu.be/xY8GZWV5fXo'),
   X('mov1', 'Movilidad de cadera (90/90)', 'Movilidad', 'Colchoneta'), X('mov2', 'Estiramiento de isquiotibiales', 'Movilidad', 'Colchoneta'), X('mov3', 'Gato-camello', 'Movilidad', 'Colchoneta'),
   X('mov4', 'Rotaciones torácicas', 'Movilidad', 'Colchoneta'), X('mov5', 'Liberación con rodillo (foam roller)', 'Movilidad', 'Rodillo'), X('mov6', 'Movilidad de hombro con banda', 'Movilidad', 'Banda elástica'),
   // En casa (peso corporal, mancuernas y bandas)
@@ -297,5 +299,14 @@ export const ROUTINE_TEMPLATES = [
   ] }
 ];
 
-/** Enlace a un video de la técnica del ejercicio (búsqueda en YouTube) */
-export const exVideo = (name) => `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} técnica correcta`)}`;
+/** Extrae el ID de YouTube (watch, youtu.be o shorts) */
+export function youtubeId(url = '') {
+  const m = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:shorts\/|embed\/|watch\?v=))([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : '';
+}
+/** Enlace a un video de la técnica del ejercicio (video directo si existe, o búsqueda en YouTube) */
+export const exVideo = (exOrName) => {
+  if (exOrName && typeof exOrName === 'object' && exOrName.video) return exOrName.video;
+  const name = typeof exOrName === 'string' ? exOrName : exOrName?.name || '';
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} técnica correcta`)}`;
+};

@@ -122,7 +122,8 @@ const P = {
   tag2: '<path d="M3 7.5V3h4.5L21 16.5 16.5 21z"/><circle cx="7" cy="7" r="1.3"/>',
   rotate: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
   medal: '<circle cx="12" cy="15" r="6"/><path d="M8.5 10 6 2.5h4l2 4.5 2-4.5h4L15.5 10"/><path d="m12 12.5.9 1.8 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.3z"/>',
-  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  play: '<polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none"/>'
 };
 
 export function icon(name, cls = '') {
